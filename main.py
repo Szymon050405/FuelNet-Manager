@@ -21,7 +21,7 @@ customers_by_station = {}
 editing_employee_index = None
 editing_customer_index = None
 
-# ----------------- FUNKCJE STACJI ------------------
+# ----------------- STACJE ------------------
 
 def find_stations():
     city = entry_city.get()
@@ -181,8 +181,7 @@ def add_customer():
     phone = entry_customer_phone.get().strip()
     station = entry_customer_station.get().strip()
     if name and surname and email and phone and station:
-        customer = {"name": name, "surname": surname, "email": email, "phone": phone, "station": station}
-        customers_data.append(customer)
+        customers_data.append({"name": name, "surname": surname, "email": email, "phone": phone, "station": station})
         update_customer_tables()
         entry_customer_name.delete(0, END)
         entry_customer_surname.delete(0, END)
@@ -255,7 +254,7 @@ root.geometry("1200x750")
 notebook = ttk.Notebook(root)
 notebook.pack(fill=BOTH, expand=True)
 
-# === Mapa ===
+# --- Mapa ---
 frame_map = Frame(notebook)
 notebook.add(frame_map, text="Mapa")
 frame_left = Frame(frame_map)
@@ -282,7 +281,7 @@ map_widget_mapa.pack(fill=BOTH, expand=True)
 map_widget_mapa.set_position(52.0, 19.0)
 map_widget_mapa.set_zoom(6)
 
-# === Stacje ===
+# --- Stacje ---
 frame_stations = Frame(notebook)
 notebook.add(frame_stations, text="Stacje")
 frame_stations_left = Frame(frame_stations)
@@ -299,7 +298,7 @@ map_widget_stations.pack(fill=BOTH, expand=True)
 map_widget_stations.set_position(52.0, 19.0)
 map_widget_stations.set_zoom(6)
 
-# === Pracownicy ===
+# --- Pracownicy ---
 frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
 frame_employees_left = Frame(frame_employees)
@@ -334,7 +333,7 @@ for col in ("Imię", "Nazwisko", "Stanowisko", "Stacja"):
     tree_all_employees.column(col, width=150)
 tree_all_employees.pack(fill=BOTH, expand=True)
 
-# === Klienci ===
+# --- Klienci ---
 frame_customers = Frame(notebook)
 notebook.add(frame_customers, text="Klienci")
 frame_customers_left = Frame(frame_customers)
