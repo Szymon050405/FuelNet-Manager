@@ -10,6 +10,7 @@ station_data = []
 stations_tab_data = []
 stations_tab_markers = []
 employees_data = []
+employees_by_station = {}
 customers_data = []
 customers_by_station = {}
 editing_employee_index = None
@@ -86,12 +87,26 @@ def delete_selected_station():
 
 # ----------------- PRACOWNICY ------------------
 
-def update_employee_table():
-    tree_all_employees.delete(*tree_all_employees.get_children())
+def create_employee_table_for_station(station_name):
+    label = Label(frame_employees_right, text=f"📍 Pracownicy stacji: {station_name}", font=("Arial", 12, "bold"))
+    label.pack(pady=(10, 0))
+    tree = ttk.Treeview(frame_employees_right, columns=("Imię", "Nazwisko", "Stanowisko", "Lokalizacja"), show='headings')
+    for col in ("Imię", "Nazwisko", "Stanowisko", "Lokalizacja"):
+        tree.heading(col, text=col)
+        tree.column(col, width=130)
+    tree.pack(pady=5, fill=X)
+    employees_by_station[station_name] = tree
+
+def update_employee_tables():
+    for tree in employees_by_station.values():
+        tree.delete(*tree.get_children())
     for emp in employees_data:
+        station = emp["station"]
+        if station not in employees_by_station:
+            create_employee_table_for_station(station)
         location = emp.get("location", "")
-        tree_all_employees.insert("", END, values=(
-            emp['name'], emp['surname'], emp['role'], emp['station'], location
+        employees_by_station[station].insert("", END, values=(
+            emp["name"], emp["surname"], emp["role"], location
         ))
 
 def add_employee():
@@ -112,48 +127,42 @@ def add_employee():
             "station": station,
             "location": location
         })
-        # Reset fields
-        entry_employee_name.delete(0, END)
-        entry_employee_surname.delete(0, END)
-        entry_employee_role.delete(0, END)
-        entry_station_name.delete(0, END)
-        entry_employee_lat.delete(0, END)
-        entry_employee_lon.delete(0, END)
+        for entry in [entry_employee_name, entry_employee_surname, entry_employee_role,
+                      entry_station_name, entry_employee_lat, entry_employee_lon]:
+            entry.delete(0, END)
         editing_employee_index = None
-        update_employee_table()
+        update_employee_tables()
         label_employees_info.config(text="✅ Dodano pracownika")
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
 
 def load_selected_employee():
     global editing_employee_index
-    selected = tree_all_employees.selection()
-    if not selected:
-        label_employees_info.config(text="❗ Zaznacz pracownika")
-        return
-    index = tree_all_employees.index(selected[0])
-    emp = employees_data[index]
-    entry_employee_name.delete(0, END)
-    entry_employee_name.insert(0, emp["name"])
-    entry_employee_surname.delete(0, END)
-    entry_employee_surname.insert(0, emp["surname"])
-    entry_employee_role.delete(0, END)
-    entry_employee_role.insert(0, emp["role"])
-    entry_station_name.delete(0, END)
-    entry_station_name.insert(0, emp["station"])
-
-    if "location" in emp and "," in emp["location"]:
-        lat, lon = emp["location"].split(",")
-        entry_employee_lat.delete(0, END)
-        entry_employee_lat.insert(0, lat)
-        entry_employee_lon.delete(0, END)
-        entry_employee_lon.insert(0, lon)
-    else:
-        entry_employee_lat.delete(0, END)
-        entry_employee_lon.delete(0, END)
-
-    editing_employee_index = index
-    label_employees_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
+    for station, tree in employees_by_station.items():
+        selected = tree.selection()
+        if selected:
+            index = tree.index(selected[0])
+            emp = [e for e in employees_data if e["station"] == station][index]
+            entry_employee_name.delete(0, END)
+            entry_employee_name.insert(0, emp["name"])
+            entry_employee_surname.delete(0, END)
+            entry_employee_surname.insert(0, emp["surname"])
+            entry_employee_role.delete(0, END)
+            entry_employee_role.insert(0, emp["role"])
+            entry_station_name.delete(0, END)
+            entry_station_name.insert(0, emp["station"])
+            if "location" in emp and "," in emp["location"]:
+                lat, lon = emp["location"].split(",")
+                entry_employee_lat.delete(0, END)
+                entry_employee_lat.insert(0, lat)
+                entry_employee_lon.delete(0, END)
+                entry_employee_lon.insert(0, lon)
+            else:
+                entry_employee_lat.delete(0, END)
+                entry_employee_lon.delete(0, END)
+            editing_employee_index = employees_data.index(emp)
+            label_employees_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
+            break
 
 def edit_selected_employee():
     global editing_employee_index
@@ -177,7 +186,7 @@ def edit_selected_employee():
             "station": station,
             "location": location
         })
-        update_employee_table()
+        update_employee_tables()
         editing_employee_index = None
         label_employees_info.config(text="✅ Zapisano zmiany")
     else:
@@ -185,15 +194,16 @@ def edit_selected_employee():
 
 def delete_selected_employee():
     global editing_employee_index
-    selected = tree_all_employees.selection()
-    if not selected:
-        label_employees_info.config(text="❗ Zaznacz pracownika")
-        return
-    index = tree_all_employees.index(selected[0])
-    del employees_data[index]
-    update_employee_table()
-    editing_employee_index = None
-    label_employees_info.config(text="🗑️ Usunięto pracownika")
+    for station, tree in employees_by_station.items():
+        selected = tree.selection()
+        if selected:
+            index = tree.index(selected[0])
+            emp = [e for e in employees_data if e["station"] == station][index]
+            employees_data.remove(emp)
+            update_employee_tables()
+            editing_employee_index = None
+            label_employees_info.config(text="🗑️ Usunięto pracownika")
+            break
 
 # ----------------- KLIENCI ------------------
 
@@ -214,7 +224,9 @@ def update_customer_tables():
         station = customer["station"]
         if station not in customers_by_station:
             create_customer_table_for_station(station)
-        customers_by_station[station].insert("", END, values=(customer["name"], customer["surname"], customer["email"], customer["phone"]))
+        customers_by_station[station].insert("", END, values=(
+            customer["name"], customer["surname"], customer["email"], customer["phone"]
+        ))
 
 def update_all_customers_table():
     tree_all_customers.delete(*tree_all_customers.get_children())
@@ -245,8 +257,8 @@ def add_customer():
             "station": station,
             "location": location
         })
-        update_customer_tables()
-        update_all_customers_table()  # <-- TO JEST KLUCZOWE!
+        update_customer_tables()           # 👈 tworzy nową tabelę dla nowej stacji jeśli trzeba
+        update_all_customers_table()
         for entry in [entry_customer_name, entry_customer_surname, entry_customer_email,
                       entry_customer_phone, entry_customer_station, entry_customer_lat, entry_customer_lon]:
             entry.delete(0, END)
@@ -317,6 +329,16 @@ def edit_selected_customer():
         label_customers_info.config(text="✅ Zapisano zmiany")
     else:
         label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
+
+def create_customer_table_for_station(station_name):
+    label = Label(frame_customers_right, text=f"📍 Klienci stacji: {station_name}", font=("Arial", 12, "bold"))
+    label.pack(pady=(10, 0))
+    tree = ttk.Treeview(frame_customers_right, columns=("Imię", "Nazwisko", "Email", "Telefon"), show='headings')
+    for col in ("Imię", "Nazwisko", "Email", "Telefon"):
+        tree.heading(col, text=col)
+        tree.column(col, width=130)
+    tree.pack(pady=5, fill=X)
+    customers_by_station[station_name] = tree
 
 def delete_selected_customer():
     global editing_customer_index
