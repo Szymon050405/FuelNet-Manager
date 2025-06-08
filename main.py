@@ -11,6 +11,9 @@ station_data = []
 stations_tab_data = []
 stations_tab_markers = []
 
+employees_data = []
+editing_employee_index = None
+
 # === FUNKCJE MAPY ===
 
 def find_stations():
@@ -87,8 +90,6 @@ entry_city = Entry(frame_left, width=30)
 entry_city.pack(pady=5)
 
 Button(frame_left, text="Szukaj stacji", command=find_stations).pack(pady=10)
-
-# PRZYCISKI NAWIGACYJNE Z DOPISKIEM
 Button(frame_left, text="➡️ Przenieś zaznaczoną stację do zakładki: STACJE", command=move_selected_station_to_tab).pack(pady=2, fill=X)
 Button(frame_left, text="➡️ Przejdź do zakładki: PRACOWNICY", command=lambda: notebook.select(frame_employees)).pack(pady=2, fill=X)
 Button(frame_left, text="➡️ Przejdź do zakładki: KLIENCI", command=lambda: notebook.select(frame_customers)).pack(pady=2, fill=X)
@@ -107,96 +108,154 @@ map_widget_mapa.set_zoom(6)
 
 # === ZAKŁADKA STACJE ===
 
-def update_station_listbox():
-    listbox_stations.delete(0, END)
-    for i, s in enumerate(stations_tab_data):
-        listbox_stations.insert(i, f"{i+1}. {s['name']} – {s['lat']:.5f}, {s['lon']:.5f}")
-
-def show_selected_station_on_map():
-    try:
-        index = listbox_stations.curselection()[0]
-        s = stations_tab_data[index]
-        map_widget_stations.set_position(s["lat"], s["lon"])
-        map_widget_stations.set_zoom(15)
-        label_stations_info.config(text=f"{s['name']} ({s['lat']:.4f}, {s['lon']:.4f})")
-    except IndexError:
-        label_stations_info.config(text="❗ Wybierz stację")
-
-def delete_station():
-    try:
-        index = listbox_stations.curselection()[0]
-        stations_tab_markers[index].delete()
-        stations_tab_data.pop(index)
-        stations_tab_markers.pop(index)
-        update_station_listbox()
-        label_stations_info.config(text="🗑️ Stacja usunięta")
-    except IndexError:
-        label_stations_info.config(text="❗ Nie wybrano stacji")
-
-def edit_station():
-    try:
-        index = listbox_stations.curselection()[0]
-        entry_station_name.delete(0, END)
-        entry_station_name.insert(0, stations_tab_data[index]['name'])
-        button_edit.config(text="Zapisz", command=lambda: save_station_name(index))
-        label_stations_info.config(text="✏️ Edytuj nazwę i kliknij Zapisz")
-    except IndexError:
-        label_stations_info.config(text="❗ Wybierz stację do edycji")
-
-def save_station_name(index):
-    new_name = entry_station_name.get().strip()
-    if not new_name:
-        label_stations_info.config(text="❗ Nazwa nie może być pusta")
-        return
-    stations_tab_data[index]['name'] = new_name
-    stations_tab_markers[index].set_text(new_name)
-    update_station_listbox()
-    entry_station_name.delete(0, END)
-    button_edit.config(text="Edytuj", command=edit_station)
-    label_stations_info.config(text="✅ Zmieniono nazwę stacji")
-
 frame_stations = Frame(notebook)
 notebook.add(frame_stations, text="Stacje")
 
-left = Frame(frame_stations)
-left.pack(side=LEFT, fill=Y, padx=10, pady=10)
+frame_stations_left = Frame(frame_stations)
+frame_stations_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
 
-right = Frame(frame_stations)
-right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+frame_stations_right = Frame(frame_stations)
+frame_stations_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 
-Label(left, text="Nazwa stacji:").pack(pady=(5, 0))
-entry_station_name = Entry(left, width=30)
-entry_station_name.pack(pady=2)
-
-button_edit = Button(left, text="Edytuj", command=edit_station)
-button_edit.pack(pady=2)
-
-Button(left, text="Usuń", command=delete_station).pack(pady=2)
-Button(left, text="Pokaż na mapie", command=show_selected_station_on_map).pack(pady=2)
-
-label_stations_info = Label(left, text="Brak akcji", fg="blue", wraplength=200)
-label_stations_info.pack(pady=10)
-
-listbox_stations = Listbox(left, width=45, height=25)
+listbox_stations = Listbox(frame_stations_left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
 
-map_widget_stations = tkintermapview.TkinterMapView(right, width=800, height=450)
+map_widget_stations = tkintermapview.TkinterMapView(frame_stations_right, width=800, height=450)
 map_widget_stations.pack(fill=BOTH, expand=True)
 map_widget_stations.set_position(52.0, 19.0)
 map_widget_stations.set_zoom(6)
-
-def on_stations_tab_selected(event):
-    selected_tab = notebook.index("current")
-    if notebook.tab(selected_tab, "text") == "Stacje":
-        update_station_listbox()
-
-notebook.bind("<<NotebookTabChanged>>", on_stations_tab_selected)
 
 # === ZAKŁADKA PRACOWNICY ===
 
 frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
-Label(frame_employees, text="Moduł zarządzania pracownikami (w przygotowaniu)", font=("Arial", 14)).pack(pady=20)
+
+frame_employees_left = Frame(frame_employees)
+frame_employees_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
+
+frame_employees_right = Frame(frame_employees)
+frame_employees_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+
+Label(frame_employees_left, text="Imię: ").pack()
+entry_employee_name = Entry(frame_employees_left, width=30)
+entry_employee_name.pack(pady=2)
+
+Label(frame_employees_left, text="Nazwisko: ").pack()
+entry_employee_surname = Entry(frame_employees_left, width=30)
+entry_employee_surname.pack(pady=2)
+
+Label(frame_employees_left, text="Stanowisko: ").pack()
+entry_employee_role = Entry(frame_employees_left, width=30)
+entry_employee_role.pack(pady=2)
+
+Label(frame_employees_left, text="Stacja: ").pack()
+entry_station_name = Entry(frame_employees_left, width=30)
+entry_station_name.pack(pady=2)
+
+Button(frame_employees_left, text="Dodaj pracownika", command=lambda: add_employee()).pack(pady=5)
+Button(frame_employees_left, text="✏️ Wczytaj do edycji", command=lambda: load_selected_employee()).pack(pady=2)
+Button(frame_employees_left, text="💾 Zapisz zmiany", command=lambda: edit_selected_employee()).pack(pady=2)
+Button(frame_employees_left, text="🗑️ Usuń zaznaczonego", command=lambda: delete_selected_employee()).pack(pady=2)
+
+label_employees_info = Label(frame_employees_left, text="Brak akcji", fg="blue")
+label_employees_info.pack(pady=5)
+
+tree_all_employees = ttk.Treeview(frame_employees_right, columns=("Imię", "Nazwisko", "Stanowisko", "Stacja"), show='headings')
+for col in ("Imię", "Nazwisko", "Stanowisko", "Stacja"):
+    tree_all_employees.heading(col, text=col)
+    tree_all_employees.column(col, width=150)
+tree_all_employees.pack(fill=BOTH, expand=True)
+
+def update_employee_table():
+    tree_all_employees.delete(*tree_all_employees.get_children())
+    for emp in employees_data:
+        tree_all_employees.insert("", END, values=(emp['name'], emp['surname'], emp['role'], emp['station']))
+
+def add_employee():
+    global editing_employee_index
+    name = entry_employee_name.get().strip()
+    surname = entry_employee_surname.get().strip()
+    role = entry_employee_role.get().strip()
+    station = entry_station_name.get().strip()
+
+    if name and surname and role and station:
+        employees_data.append({
+            "name": name,
+            "surname": surname,
+            "role": role,
+            "station": station
+        })
+
+        entry_employee_name.delete(0, END)
+        entry_employee_surname.delete(0, END)
+        entry_employee_role.delete(0, END)
+        entry_station_name.delete(0, END)
+
+        editing_employee_index = None
+        update_employee_table()
+        label_employees_info.config(text="✅ Dodano pracownika")
+    else:
+        label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
+
+def load_selected_employee():
+    global editing_employee_index
+    selected = tree_all_employees.selection()
+    if not selected:
+        label_employees_info.config(text="❗ Zaznacz pracownika")
+        return
+    index = tree_all_employees.index(selected[0])
+    emp = employees_data[index]
+
+    entry_employee_name.delete(0, END)
+    entry_employee_name.insert(0, emp["name"])
+
+    entry_employee_surname.delete(0, END)
+    entry_employee_surname.insert(0, emp["surname"])
+
+    entry_employee_role.delete(0, END)
+    entry_employee_role.insert(0, emp["role"])
+
+    entry_station_name.delete(0, END)
+    entry_station_name.insert(0, emp["station"])
+
+    editing_employee_index = index
+    label_employees_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
+
+def edit_selected_employee():
+    global editing_employee_index
+    if editing_employee_index is None:
+        label_employees_info.config(text="❗ Wybierz pracownika do edycji")
+        return
+
+    name = entry_employee_name.get().strip()
+    surname = entry_employee_surname.get().strip()
+    role = entry_employee_role.get().strip()
+    station = entry_station_name.get().strip()
+
+    if name and surname and role and station:
+        emp = employees_data[editing_employee_index]
+        emp["name"] = name
+        emp["surname"] = surname
+        emp["role"] = role
+        emp["station"] = station
+
+        update_employee_table()
+        label_employees_info.config(text="✅ Zapisano zmiany")
+        editing_employee_index = None
+    else:
+        label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
+
+def delete_selected_employee():
+    global editing_employee_index
+    selected = tree_all_employees.selection()
+    if not selected:
+        label_employees_info.config(text="❗ Zaznacz pracownika")
+        return
+    index = tree_all_employees.index(selected[0])
+    del employees_data[index]
+    update_employee_table()
+    editing_employee_index = None
+    label_employees_info.config(text="🗑️ Usunięto pracownika")
 
 # === ZAKŁADKA KLIENCI ===
 
