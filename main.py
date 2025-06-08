@@ -1,9 +1,10 @@
 from tkinter import *
+from tkinter import ttk
 import tkintermapview
 from utils import get_fuel_stations_near_city
 
 station_markers = []
-station_data = []  # przechowuje dane stacji z utils
+station_data = []
 
 
 def find_stations():
@@ -28,7 +29,7 @@ def find_stations():
     for station in stations:
         marker = map_widget.set_marker(station["lat"], station["lon"], text=station["name"])
         station_markers.append(marker)
-        station_data.append(station)  # zapisz stację do listy
+        station_data.append(station)
         listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
 
     map_widget.set_position(stations[0]["lat"], stations[0]["lon"])
@@ -46,15 +47,23 @@ def on_listbox_click(event):
         pass
 
 
-# GUI
+# === GUI setup ===
 root = Tk()
-root.title("Stacje benzynowe (OpenStreetMap)")
-root.geometry("1000x600")
+root.title("Zarządzanie stacjami paliw")
+root.geometry("1200x700")
 
-frame_left = Frame(root)
+# === Zakładki ===
+notebook = ttk.Notebook(root)
+notebook.pack(fill=BOTH, expand=True)
+
+# --- Zakładka STACJE ---
+frame_stations = Frame(notebook)
+notebook.add(frame_stations, text="Stacje")
+
+frame_left = Frame(frame_stations)
 frame_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
 
-frame_right = Frame(root)
+frame_right = Frame(frame_stations)
 frame_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 
 Label(frame_left, text="Miejscowość:").pack(pady=5)
@@ -69,9 +78,10 @@ listbox = Listbox(frame_left, width=50)
 listbox.pack(pady=10, fill=BOTH, expand=True)
 listbox.bind("<<ListboxSelect>>", on_listbox_click)
 
-map_widget = tkintermapview.TkinterMapView(frame_right, width=700, height=500)
+map_widget = tkintermapview.TkinterMapView(frame_right, width=800, height=500)
 map_widget.pack(fill=BOTH, expand=True)
 map_widget.set_position(52.0, 19.0)
 map_widget.set_zoom(6)
 
+# === START ===
 root.mainloop()
