@@ -73,6 +73,11 @@ entry_city.pack(pady=5)
 
 Button(frame_left, text="Szukaj stacji", command=find_stations).pack(pady=10)
 
+# NOWE PRZYCISKI PRZEŁĄCZAJĄCE ZAKŁADKI
+Button(frame_left, text="➡️ Przenieś stacje do zakładki", command=lambda: notebook.select(frame_stations)).pack(pady=2, fill=X)
+Button(frame_left, text="➡️ Przenieś pracowników do zakładki", command=lambda: notebook.select(frame_employees)).pack(pady=2, fill=X)
+Button(frame_left, text="➡️ Przenieś klientów do zakładki", command=lambda: notebook.select(frame_customers)).pack(pady=2, fill=X)
+
 label_info = Label(frame_left, text="", fg="blue")
 label_info.pack(pady=5)
 
