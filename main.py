@@ -56,7 +56,7 @@ def move_selected_station_to_tab():
         station = station_data[index]
         if station not in stations_tab_data:
             stations_tab_data.append(station)
-            marker = map_widget_mapa.set_marker(station["lat"], station["lon"], text=station["name"])
+            marker = map_widget_stations.set_marker(station["lat"], station["lon"], text=station["name"])
             stations_tab_markers.append(marker)
         notebook.select(frame_stations)
     except IndexError:
@@ -116,8 +116,8 @@ def show_selected_station_on_map():
     try:
         index = listbox_stations.curselection()[0]
         s = stations_tab_data[index]
-        map_widget_mapa.set_position(s["lat"], s["lon"])
-        map_widget_mapa.set_zoom(15)
+        map_widget_stations.set_position(s["lat"], s["lon"])
+        map_widget_stations.set_zoom(15)
         label_stations_info.config(text=f"{s['name']} ({s['lat']:.4f}, {s['lon']:.4f})")
     except IndexError:
         label_stations_info.config(text="❗ Wybierz stację")
@@ -179,6 +179,11 @@ label_stations_info.pack(pady=10)
 
 listbox_stations = Listbox(left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
+
+map_widget_stations = tkintermapview.TkinterMapView(right, width=800, height=450)
+map_widget_stations.pack(fill=BOTH, expand=True)
+map_widget_stations.set_position(52.0, 19.0)
+map_widget_stations.set_zoom(6)
 
 def on_stations_tab_selected(event):
     selected_tab = notebook.index("current")
