@@ -98,6 +98,31 @@ def move_selected_station_to_tab():
     except IndexError:
         label_info.config(text="❗ Zaznacz stację na liście")
 
+def rename_selected_station():
+    index = listbox_stations.curselection()
+    if not index:
+        label_info.config(text="❗ Zaznacz stację do zmiany nazwy")
+        return
+    index = index[0]
+    station = stations_tab_data[index]
+
+    def apply_new_name():
+        new_name = entry_new_name.get().strip()
+        if new_name:
+            station["name"] = new_name
+            listbox_stations.delete(index)
+            listbox_stations.insert(index, f"{new_name} – {station['lat']:.5f}, {station['lon']:.5f}")
+            stations_tab_markers[index].set_text(new_name)
+            rename_window.destroy()
+
+    rename_window = Toplevel()
+    rename_window.title("Zmień nazwę stacji")
+    Label(rename_window, text="Nowa nazwa stacji:").pack(pady=5)
+    entry_new_name = Entry(rename_window, width=40)
+    entry_new_name.pack(pady=5)
+    entry_new_name.insert(0, station["name"])
+    Button(rename_window, text="Zapisz", command=apply_new_name).pack(pady=10)
+
 def delete_selected_station():
     try:
         index = listbox_stations.curselection()[0]
@@ -426,7 +451,7 @@ frame_stations_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 listbox_stations = Listbox(frame_stations_left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
 Button(frame_stations_left, text="🗑️ Usuń zaznaczoną stację", command=delete_selected_station).pack(pady=2, fill=X)
-
+Button(frame_stations_left, text="✏️ Zmień nazwę stacji", command=rename_selected_station).pack(pady=2, fill=X)
 
 map_widget_stations = tkintermapview.TkinterMapView(frame_stations_right, width=800, height=450)
 map_widget_stations.pack(fill=BOTH, expand=True)
@@ -527,67 +552,71 @@ Button(frame_customers_left, text="🗑️ Usuń zaznaczonego", command=delete_s
 label_customers_info = Label(frame_customers_left, text="Brak akcji", fg="blue")
 label_customers_info.pack(pady=5)
 
-# --- Mapa Pracownicy ---
-frame_map_employees = Frame(notebook)
-notebook.add(frame_map_employees, text="Mapa Pracownicy")
+# --- Mapa Pracownicy i Klienci ---
+frame_map_people = Frame(notebook)
+notebook.add(frame_map_people, text="Mapa Pracownicy i Klienci")
 
-btn_refresh_employees_map = Button(frame_map_employees, text="🔄 Odśwież dane na mapie", command=lambda: show_employees_on_map())
-btn_refresh_employees_map.pack(side=TOP, fill=X, pady=(10, 5))
+map_widget_people = tkintermapview.TkinterMapView(frame_map_people, width=1150, height=700)
+map_widget_people.pack(fill=BOTH, expand=True)
+map_widget_people.set_position(52.0, 19.0)
+map_widget_people.set_zoom(6)
 
-map_widget_employees = tkintermapview.TkinterMapView(frame_map_employees, width=1150, height=700)
-map_widget_employees.pack(fill=BOTH, expand=True)
-map_widget_employees.set_position(52.0, 19.0)
-map_widget_employees.set_zoom(6)
+def show_people_on_map():
+    map_widget_people.delete_all_marker()
 
-def show_employees_on_map():
-    map_widget_employees.delete_all_marker()
+    # Pracownicy
     for emp in employees_data:
         loc = emp.get("location", "")
         if loc:
             try:
                 lat, lon = map(float, loc.split(","))
-                map_widget_employees.set_marker(lat, lon, text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
-                continue
+                map_widget_people.set_marker(lat, lon, text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
             except Exception as e:
                 print(f"Błąd lokalizacji pracownika: {e}")
 
-        station = next((s for s in station_data if s["name"] == emp.get("station", "")), None)
-        if station:
-            try:
-                map_widget_employees.set_marker(station["lat"], station["lon"], text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
-            except Exception as e:
-                print(f"Błąd lokalizacji pracownika przez stację: {e}")
-
-# --- Mapa Klienci ---
-frame_map_customers = Frame(notebook)
-notebook.add(frame_map_customers, text="Mapa Klienci")
-
-btn_refresh_customers_map = Button(frame_map_customers, text="🔄 Odśwież dane na mapie", command=lambda: show_customers_on_map())
-btn_refresh_customers_map.pack(side=TOP, fill=X, pady=(10, 5))
-
-map_widget_customers = tkintermapview.TkinterMapView(frame_map_customers, width=1150, height=700)
-map_widget_customers.pack(fill=BOTH, expand=True)
-map_widget_customers.set_position(52.0, 19.0)
-map_widget_customers.set_zoom(6)
-
-def show_customers_on_map():
-    map_widget_customers.delete_all_marker()
+    # Klienci
     for cust in customers_data:
         loc = cust.get("location", "")
         if loc:
             try:
                 lat, lon = map(float, loc.split(","))
-                map_widget_customers.set_marker(lat, lon, text=f"🧑‍💼 {cust['name']} {cust['surname']}")
-                continue
+                map_widget_people.set_marker(lat, lon, text=f"🧑‍💼 {cust['name']} {cust['surname']}")
+            except Exception as e:
+                print(f"Błąd lokalizacji klienta: {e}")
+        else:
+            # Fallback – spróbuj znaleźć lokalizację na podstawie stacji
+            station_name = cust.get("station", "")
+            station = next((s for s in station_data if s["name"] == station_name), None)
+            if station:
+                try:
+                    map_widget_people.set_marker(station["lat"], station["lon"], text=f"🧑‍💼 {cust['name']} {cust['surname']}")
+                except Exception as e:
+                    print(f"Błąd lokalizacji klienta przez stację: {e}")
+
+    # Pracownicy
+    for emp in employees_data:
+        loc = emp.get("location", "")
+        if loc:
+            try:
+                lat, lon = map(float, loc.split(","))
+                map_widget_people.set_marker(lat, lon, text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
+            except Exception as e:
+                print(f"Błąd lokalizacji pracownika: {e}")
+
+    # Klienci
+    for cust in customers_data:
+        station_name = cust.get("station", "")
+        station = next((s for s in station_data if s["name"] == station_name), None)
+        if station:
+            try:
+                lat = station["lat"]
+                lon = station["lon"]
+                map_widget_people.set_marker(lat, lon, text=f"🧑‍💼 {cust['name']} {cust['surname']}")
             except Exception as e:
                 print(f"Błąd lokalizacji klienta: {e}")
 
-        station = next((s for s in station_data if s["name"] == cust.get("station", "")), None)
-        if station:
-            try:
-                map_widget_customers.set_marker(station["lat"], station["lon"], text=f"🧑‍💼 {cust['name']} {cust['surname']}")
-            except Exception as e:
-                print(f"Błąd lokalizacji klienta przez stację: {e}")
+Button(frame_map_people, text="🔄 Odśwież dane na mapie", command=show_people_on_map).pack(pady=10)
+
 
 
 root.mainloop()
