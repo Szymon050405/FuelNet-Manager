@@ -28,6 +28,7 @@ def get_city_coordinates(city_name: str) -> list:
         return [52.0, 19.0]
 
 
+
 def get_fuel_stations_near_city(city_name: str) -> list:
 
     try:
