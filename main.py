@@ -12,6 +12,7 @@ stations_tab_data = []
 stations_tab_markers = []
 
 employees_data = []
+editing_employee_index = None
 
 # === FUNKCJE MAPY ===
 
@@ -152,8 +153,9 @@ entry_station_name = Entry(frame_employees_left, width=30)
 entry_station_name.pack(pady=2)
 
 Button(frame_employees_left, text="Dodaj pracownika", command=lambda: add_employee()).pack(pady=5)
-Button(frame_employees_left, text="Edytuj zaznaczonego", command=lambda: edit_selected_employee()).pack(pady=2)
-Button(frame_employees_left, text="Usuń zaznaczonego", command=lambda: delete_selected_employee()).pack(pady=2)
+Button(frame_employees_left, text="✏️ Wczytaj do edycji", command=lambda: load_selected_employee()).pack(pady=2)
+Button(frame_employees_left, text="💾 Zapisz zmiany", command=lambda: edit_selected_employee()).pack(pady=2)
+Button(frame_employees_left, text="🗑️ Usuń zaznaczonego", command=lambda: delete_selected_employee()).pack(pady=2)
 
 label_employees_info = Label(frame_employees_left, text="Brak akcji", fg="blue")
 label_employees_info.pack(pady=5)
@@ -170,6 +172,7 @@ def update_employee_table():
         tree_all_employees.insert("", END, values=(emp['name'], emp['surname'], emp['role'], emp['station']))
 
 def add_employee():
+    global editing_employee_index
     name = entry_employee_name.get().strip()
     surname = entry_employee_surname.get().strip()
     role = entry_employee_role.get().strip()
@@ -188,12 +191,14 @@ def add_employee():
         entry_employee_role.delete(0, END)
         entry_station_name.delete(0, END)
 
+        editing_employee_index = None
         update_employee_table()
         label_employees_info.config(text="✅ Dodano pracownika")
     else:
-        label_employees_info.config(text="❗ Uzupelnij wszystkie pola")
+        label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
 
-def edit_selected_employee():
+def load_selected_employee():
+    global editing_employee_index
     selected = tree_all_employees.selection()
     if not selected:
         label_employees_info.config(text="❗ Zaznacz pracownika")
@@ -201,15 +206,47 @@ def edit_selected_employee():
     index = tree_all_employees.index(selected[0])
     emp = employees_data[index]
 
-    emp["name"] = entry_employee_name.get().strip()
-    emp["surname"] = entry_employee_surname.get().strip()
-    emp["role"] = entry_employee_role.get().strip()
-    emp["station"] = entry_station_name.get().strip()
+    entry_employee_name.delete(0, END)
+    entry_employee_name.insert(0, emp["name"])
 
-    update_employee_table()
-    label_employees_info.config(text="✅ Zaktualizowano pracownika")
+    entry_employee_surname.delete(0, END)
+    entry_employee_surname.insert(0, emp["surname"])
+
+    entry_employee_role.delete(0, END)
+    entry_employee_role.insert(0, emp["role"])
+
+    entry_station_name.delete(0, END)
+    entry_station_name.insert(0, emp["station"])
+
+    editing_employee_index = index
+    label_employees_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
+
+def edit_selected_employee():
+    global editing_employee_index
+    if editing_employee_index is None:
+        label_employees_info.config(text="❗ Wybierz pracownika do edycji")
+        return
+
+    name = entry_employee_name.get().strip()
+    surname = entry_employee_surname.get().strip()
+    role = entry_employee_role.get().strip()
+    station = entry_station_name.get().strip()
+
+    if name and surname and role and station:
+        emp = employees_data[editing_employee_index]
+        emp["name"] = name
+        emp["surname"] = surname
+        emp["role"] = role
+        emp["station"] = station
+
+        update_employee_table()
+        label_employees_info.config(text="✅ Zapisano zmiany")
+        editing_employee_index = None
+    else:
+        label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
 
 def delete_selected_employee():
+    global editing_employee_index
     selected = tree_all_employees.selection()
     if not selected:
         label_employees_info.config(text="❗ Zaznacz pracownika")
@@ -217,6 +254,7 @@ def delete_selected_employee():
     index = tree_all_employees.index(selected[0])
     del employees_data[index]
     update_employee_table()
+    editing_employee_index = None
     label_employees_info.config(text="🗑️ Usunięto pracownika")
 
 # === ZAKŁADKA KLIENCI ===
