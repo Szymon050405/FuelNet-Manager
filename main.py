@@ -52,61 +52,6 @@ def on_listbox_click(event):
     except IndexError:
         pass
 
-def update_station_tables():
-    for widget in frame_employees_right.winfo_children():
-        widget.destroy()
-
-    station_employees = {}
-    for e in employees_data:
-        station_employees.setdefault(e['station'], []).append(e)
-
-    for station_name, emp_list in station_employees.items():
-        Label(frame_employees_right, text=station_name, font=("Arial", 12, "bold")).pack(anchor=W, padx=10, pady=(10, 0))
-
-        frame_table = Frame(frame_employees_right)
-        frame_table.pack(fill=BOTH, expand=False, padx=10, pady=(0, 10))
-
-        columns = ("Imię", "Nazwisko", "Stanowisko")
-        tree = ttk.Treeview(frame_table, columns=columns, show='headings', height=5)
-        for col in columns:
-            tree.heading(col, text=col)
-            tree.column(col, width=150)
-        for emp in emp_list:
-            tree.insert("", "end", values=(emp['name'], emp['surname'], emp['role']))
-
-        vsb = ttk.Scrollbar(frame_table, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=vsb.set)
-
-        tree.pack(side=LEFT, fill=BOTH, expand=True)
-        vsb.pack(side=RIGHT, fill=Y)
-
-def add_employee():
-    name = entry_employee_name.get().strip()
-    surname = entry_employee_surname.get().strip()
-    role = entry_employee_role.get().strip()
-    station_name = entry_station_name.get().strip()
-
-    if name and surname and role and station_name:
-        employees_data.append({
-            "name": name,
-            "surname": surname,
-            "role": role,
-            "station": station_name
-        })
-
-        entry_employee_name.delete(0, END)
-        entry_employee_surname.delete(0, END)
-        entry_employee_role.delete(0, END)
-        entry_station_name.delete(0, END)
-
-        update_station_tables()
-        label_employees_info.config(text="✅ Dodano pracownika")
-    else:
-        label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
-
-def update_station_combobox():
-    pass
-
 def move_selected_station_to_tab():
     try:
         index = listbox.curselection()[0]
@@ -206,10 +151,73 @@ Label(frame_employees_left, text="Stacja: ").pack()
 entry_station_name = Entry(frame_employees_left, width=30)
 entry_station_name.pack(pady=2)
 
-Button(frame_employees_left, text="Dodaj pracownika", command=add_employee).pack(pady=5)
+Button(frame_employees_left, text="Dodaj pracownika", command=lambda: add_employee()).pack(pady=5)
+Button(frame_employees_left, text="Edytuj zaznaczonego", command=lambda: edit_selected_employee()).pack(pady=2)
+Button(frame_employees_left, text="Usuń zaznaczonego", command=lambda: delete_selected_employee()).pack(pady=2)
 
 label_employees_info = Label(frame_employees_left, text="Brak akcji", fg="blue")
 label_employees_info.pack(pady=5)
+
+tree_all_employees = ttk.Treeview(frame_employees_right, columns=("Imię", "Nazwisko", "Stanowisko", "Stacja"), show='headings')
+for col in ("Imię", "Nazwisko", "Stanowisko", "Stacja"):
+    tree_all_employees.heading(col, text=col)
+    tree_all_employees.column(col, width=150)
+tree_all_employees.pack(fill=BOTH, expand=True)
+
+def update_employee_table():
+    tree_all_employees.delete(*tree_all_employees.get_children())
+    for emp in employees_data:
+        tree_all_employees.insert("", END, values=(emp['name'], emp['surname'], emp['role'], emp['station']))
+
+def add_employee():
+    name = entry_employee_name.get().strip()
+    surname = entry_employee_surname.get().strip()
+    role = entry_employee_role.get().strip()
+    station = entry_station_name.get().strip()
+
+    if name and surname and role and station:
+        employees_data.append({
+            "name": name,
+            "surname": surname,
+            "role": role,
+            "station": station
+        })
+
+        entry_employee_name.delete(0, END)
+        entry_employee_surname.delete(0, END)
+        entry_employee_role.delete(0, END)
+        entry_station_name.delete(0, END)
+
+        update_employee_table()
+        label_employees_info.config(text="✅ Dodano pracownika")
+    else:
+        label_employees_info.config(text="❗ Uzupelnij wszystkie pola")
+
+def edit_selected_employee():
+    selected = tree_all_employees.selection()
+    if not selected:
+        label_employees_info.config(text="❗ Zaznacz pracownika")
+        return
+    index = tree_all_employees.index(selected[0])
+    emp = employees_data[index]
+
+    emp["name"] = entry_employee_name.get().strip()
+    emp["surname"] = entry_employee_surname.get().strip()
+    emp["role"] = entry_employee_role.get().strip()
+    emp["station"] = entry_station_name.get().strip()
+
+    update_employee_table()
+    label_employees_info.config(text="✅ Zaktualizowano pracownika")
+
+def delete_selected_employee():
+    selected = tree_all_employees.selection()
+    if not selected:
+        label_employees_info.config(text="❗ Zaznacz pracownika")
+        return
+    index = tree_all_employees.index(selected[0])
+    del employees_data[index]
+    update_employee_table()
+    label_employees_info.config(text="🗑️ Usunięto pracownika")
 
 # === ZAKŁADKA KLIENCI ===
 
