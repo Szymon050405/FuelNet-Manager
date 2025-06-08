@@ -365,4 +365,5 @@ Button(frame_customers_left, text="🗑️ Usuń zaznaczonego", command=delete_s
 label_customers_info = Label(frame_customers_left, text="Brak akcji", fg="blue")
 label_customers_info.pack(pady=5)
 
+
 root.mainloop()
