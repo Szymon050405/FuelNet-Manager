@@ -52,11 +52,33 @@ def on_listbox_click(event):
     except IndexError:
         pass
 
-def update_employee_table():
-    for row in tree_employees.get_children():
-        tree_employees.delete(row)
-    for i, e in enumerate(employees_data):
-        tree_employees.insert("", "end", values=(e['name'], e['surname'], e['role'], e['station']))
+def update_station_tables():
+    for widget in frame_employees_right.winfo_children():
+        widget.destroy()
+
+    station_employees = {}
+    for e in employees_data:
+        station_employees.setdefault(e['station'], []).append(e)
+
+    for station_name, emp_list in station_employees.items():
+        Label(frame_employees_right, text=station_name, font=("Arial", 12, "bold")).pack(anchor=W, padx=10, pady=(10, 0))
+
+        frame_table = Frame(frame_employees_right)
+        frame_table.pack(fill=BOTH, expand=False, padx=10, pady=(0, 10))
+
+        columns = ("Imię", "Nazwisko", "Stanowisko")
+        tree = ttk.Treeview(frame_table, columns=columns, show='headings', height=5)
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=150)
+        for emp in emp_list:
+            tree.insert("", "end", values=(emp['name'], emp['surname'], emp['role']))
+
+        vsb = ttk.Scrollbar(frame_table, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+
+        tree.pack(side=LEFT, fill=BOTH, expand=True)
+        vsb.pack(side=RIGHT, fill=Y)
 
 def add_employee():
     name = entry_employee_name.get().strip()
@@ -77,7 +99,7 @@ def add_employee():
         entry_employee_role.delete(0, END)
         entry_station_name.delete(0, END)
 
-        update_employee_table()
+        update_station_tables()
         label_employees_info.config(text="✅ Dodano pracownika")
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
@@ -188,13 +210,6 @@ Button(frame_employees_left, text="Dodaj pracownika", command=add_employee).pack
 
 label_employees_info = Label(frame_employees_left, text="Brak akcji", fg="blue")
 label_employees_info.pack(pady=5)
-
-columns = ("Imię", "Nazwisko", "Stanowisko", "Stacja")
-tree_employees = ttk.Treeview(frame_employees_right, columns=columns, show='headings')
-for col in columns:
-    tree_employees.heading(col, text=col)
-    tree_employees.column(col, width=150)
-tree_employees.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
 # === ZAKŁADKA KLIENCI ===
 
