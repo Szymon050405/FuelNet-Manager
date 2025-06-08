@@ -11,6 +11,8 @@ station_data = []
 stations_tab_data = []
 stations_tab_markers = []
 
+employees_data = []
+
 # === FUNKCJE MAPY ===
 
 def find_stations():
@@ -196,7 +198,29 @@ notebook.bind("<<NotebookTabChanged>>", on_stations_tab_selected)
 
 frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
-Label(frame_employees, text="Moduł zarządzania pracownikami (w przygotowaniu)", font=("Arial", 14)).pack(pady=20)
+
+frame_employees_left = Frame(frame_employees)
+frame_employees_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
+
+frame_employees_right = Frame(frame_employees)
+frame_employees_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+
+Label(frame_employees_left, text="Imię:").pack(pady=(10, 0))
+entry_employee_name = Entry(frame_employees_left, width=30)
+entry_employee_name.pack(pady=2)
+
+Label(frame_employees_left, text="Nazwisko:").pack()
+entry_employee_surname = Entry(frame_employees_left, width=30)
+entry_employee_surname.pack(pady=2)
+
+Label(frame_employees_left, text="Stanowisko:").pack()
+entry_employee_role = Entry(frame_employees_left, width=30)
+entry_employee_role.pack(pady=2)
+
+Button(frame_employees_left, text="Dodaj pracownika").pack(pady=5)
+Listbox(frame_employees_left, width=45, height=20).pack(pady=5, fill=Y)
+
+Label(frame_employees_right, text="Moduł zarządzania pracownikami – podstawowa wersja", font=("Arial", 14)).pack(pady=20)
 
 # === ZAKŁADKA KLIENCI ===
 
