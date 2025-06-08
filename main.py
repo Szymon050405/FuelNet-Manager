@@ -216,70 +216,76 @@ def update_customer_tables():
             create_customer_table_for_station(station)
         customers_by_station[station].insert("", END, values=(customer["name"], customer["surname"], customer["email"], customer["phone"]))
 
+def update_all_customers_table():
+    tree_all_customers.delete(*tree_all_customers.get_children())
+    for cust in customers_data:
+        location = cust.get("location", "")
+        tree_all_customers.insert("", END, values=(
+            cust["name"], cust["surname"], cust["email"],
+            cust["phone"], cust["station"], location
+        ))
+
 def add_customer():
-    def add_customer():
-        global editing_customer_index
-        name = entry_customer_name.get().strip()
-        surname = entry_customer_surname.get().strip()
-        email = entry_customer_email.get().strip()
-        phone = entry_customer_phone.get().strip()
-        station = entry_customer_station.get().strip()
-        lat = entry_customer_lat.get().strip()
-        lon = entry_customer_lon.get().strip()
-
-        if name and surname and email and phone and station:
-            location = f"{lat},{lon}" if lat and lon else ""
-            customers_data.append({
-                "name": name,
-                "surname": surname,
-                "email": email,
-                "phone": phone,
-                "station": station,
-                "location": location
-            })
-            update_customer_tables()
-            for entry in [entry_customer_name, entry_customer_surname, entry_customer_email,
-                          entry_customer_phone, entry_customer_station, entry_customer_lat, entry_customer_lon]:
-                entry.delete(0, END)
-            editing_customer_index = None
-            label_customers_info.config(text=f"✅ Dodano klienta do stacji: {station}")
-        else:
-            label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
-
-def load_selected_customer():
     global editing_customer_index
-    for station, tree in customers_by_station.items():
-        selected = tree.selection()
-        if selected:
-            index = tree.index(selected[0])
-            customer = [c for c in customers_data if c["station"] == station][index]
+    name = entry_customer_name.get().strip()
+    surname = entry_customer_surname.get().strip()
+    email = entry_customer_email.get().strip()
+    phone = entry_customer_phone.get().strip()
+    station = entry_customer_station.get().strip()
+    lat = entry_customer_lat.get().strip()
+    lon = entry_customer_lon.get().strip()
 
-            entry_customer_name.delete(0, END)
-            entry_customer_name.insert(0, customer["name"])
-            entry_customer_surname.delete(0, END)
-            entry_customer_surname.insert(0, customer["surname"])
-            entry_customer_email.delete(0, END)
-            entry_customer_email.insert(0, customer["email"])
-            entry_customer_phone.delete(0, END)
-            entry_customer_phone.insert(0, customer["phone"])
-            entry_customer_station.delete(0, END)
-            entry_customer_station.insert(0, customer["station"])
+    if name and surname and email and phone and station:
+        location = f"{lat},{lon}" if lat and lon else ""
+        customers_data.append({
+            "name": name,
+            "surname": surname,
+            "email": email,
+            "phone": phone,
+            "station": station,
+            "location": location
+        })
+        update_customer_tables()
+        update_all_customers_table()  # <-- TO JEST KLUCZOWE!
+        for entry in [entry_customer_name, entry_customer_surname, entry_customer_email,
+                      entry_customer_phone, entry_customer_station, entry_customer_lat, entry_customer_lon]:
+            entry.delete(0, END)
+        editing_customer_index = None
+        label_customers_info.config(text=f"✅ Dodano klienta do stacji: {station}")
+    else:
+        label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
 
-            location = customer.get("location", "")
-            if "," in location:
-                lat, lon = location.split(",")
-                entry_customer_lat.delete(0, END)
-                entry_customer_lat.insert(0, lat)
-                entry_customer_lon.delete(0, END)
-                entry_customer_lon.insert(0, lon)
-            else:
-                entry_customer_lat.delete(0, END)
-                entry_customer_lon.delete(0, END)
+def load_customer_from_table():
+    global editing_customer_index
+    selected = tree_all_customers.selection()
+    if not selected:
+        return
+    index = tree_all_customers.index(selected[0])
+    customer = customers_data[index]
 
-            editing_customer_index = customers_data.index(customer)
-            label_customers_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
-            break
-            break
+    entry_customer_name.delete(0, END)
+    entry_customer_name.insert(0, customer["name"])
+    entry_customer_surname.delete(0, END)
+    entry_customer_surname.insert(0, customer["surname"])
+    entry_customer_email.delete(0, END)
+    entry_customer_email.insert(0, customer["email"])
+    entry_customer_phone.delete(0, END)
+    entry_customer_phone.insert(0, customer["phone"])
+    entry_customer_station.delete(0, END)
+    entry_customer_station.insert(0, customer["station"])
+
+    if "location" in customer and "," in customer["location"]:
+        lat, lon = customer["location"].split(",")
+        entry_customer_lat.delete(0, END)
+        entry_customer_lat.insert(0, lat)
+        entry_customer_lon.delete(0, END)
+        entry_customer_lon.insert(0, lon)
+    else:
+        entry_customer_lat.delete(0, END)
+        entry_customer_lon.delete(0, END)
+
+    editing_customer_index = index
+    label_customers_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
 
 def edit_selected_customer():
     global editing_customer_index
@@ -432,7 +438,17 @@ frame_customers_left = Frame(frame_customers)
 frame_customers_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
 frame_customers_right = Frame(frame_customers)
 frame_customers_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+tree_all_customers = ttk.Treeview(
+    frame_customers_right,
+    columns=("Imię", "Nazwisko", "Email", "Telefon", "Stacja", "Lokalizacja"),
+    show='headings'
+)
 
+
+for col in ("Imię", "Nazwisko", "Email", "Telefon", "Stacja", "Lokalizacja"):
+    tree_all_customers.heading(col, text=col)
+    tree_all_customers.column(col, width=120)
+tree_all_customers.pack(fill=BOTH, expand=True, pady=10)
 Label(frame_customers_left, text="Imię: ").pack()
 entry_customer_name = Entry(frame_customers_left, width=30)
 entry_customer_name.pack(pady=2)
@@ -456,7 +472,8 @@ entry_customer_lon = Entry(frame_customers_left, width=30)
 entry_customer_lon.pack(pady=2)
 
 Button(frame_customers_left, text="Dodaj klienta", command=add_customer).pack(pady=5)
-Button(frame_customers_left, text="✏️ Wczytaj do edycji", command=load_selected_customer).pack(pady=2)
+Button(frame_customers_left, text="✏️ Wczytaj do edycji", command=load_customer_from_table).pack(pady=2)
+
 Button(frame_customers_left, text="💾 Zapisz zmiany", command=edit_selected_customer).pack(pady=2)
 Button(frame_customers_left, text="🗑️ Usuń zaznaczonego", command=delete_selected_customer).pack(pady=2)
 
