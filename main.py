@@ -1,16 +1,10 @@
+
 from tkinter import *
 from tkinter import ttk
 import tkintermapview
 
-# 👇 Przykładowa funkcja zamiast importu z utils
-def get_fuel_stations_near_city(city):
-    return [
-        {"name": "Stacja ORLEN", "lat": 52.2297, "lon": 21.0122},
-        {"name": "Stacja BP", "lat": 52.2370, "lon": 21.0150},
-        {"name": "Stacja LOTOS", "lat": 52.2300, "lon": 21.0200}
-    ]
+from utils import get_city_coordinates
 
-# Globalne dane
 station_markers = []
 station_data = []
 stations_tab_data = []
@@ -23,25 +17,35 @@ editing_customer_index = None
 
 # ----------------- STACJE ------------------
 
+from utils import get_fuel_stations_near_city  # dodaj na górze pliku main, jeśli jeszcze nie masz
+
 def find_stations():
     city = entry_city.get()
     if not city:
         label_info.config(text="❗ Podaj nazwę miejscowości")
         return
+
     listbox.delete(0, END)
     for m in station_markers:
         m.delete()
     station_markers.clear()
     station_data.clear()
-    stations = get_fuel_stations_near_city(city)
+
+    stations = get_fuel_stations_near_city(city)  # poprawne źródło danych
+
     if not stations:
         label_info.config(text="⚠️ Nie znaleziono stacji w okolicy.")
         return
+
     for station in stations:
-        marker = map_widget_mapa.set_marker(station["lat"], station["lon"], text=station["name"])
-        station_markers.append(marker)
-        station_data.append(station)
-        listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
+        try:
+            marker = map_widget_mapa.set_marker(station["lat"], station["lon"], text=station["name"])
+            station_markers.append(marker)
+            station_data.append(station)
+            listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
+        except KeyError as e:
+            print(f"Błąd w danych stacji: {e}")  # jeśli jakiś wpis nie ma 'lat', 'lon' lub 'name'
+
     map_widget_mapa.set_position(stations[0]["lat"], stations[0]["lon"])
     map_widget_mapa.set_zoom(13)
     label_info.config(text=f"✅ Znaleziono {len(stations)} stacji")
