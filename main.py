@@ -6,7 +6,6 @@ from utils import get_fuel_stations_near_city
 station_markers = []
 station_data = []
 
-
 def find_stations():
     city = entry_city.get()
 
@@ -27,36 +26,43 @@ def find_stations():
         return
 
     for station in stations:
-        marker = map_widget.set_marker(station["lat"], station["lon"], text=station["name"])
+        marker = map_widget_stations.set_marker(station["lat"], station["lon"], text=station["name"])
         station_markers.append(marker)
         station_data.append(station)
         listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
 
-    map_widget.set_position(stations[0]["lat"], stations[0]["lon"])
-    map_widget.set_zoom(13)
+    map_widget_stations.set_position(stations[0]["lat"], stations[0]["lon"])
+    map_widget_stations.set_zoom(13)
     label_info.config(text=f"✅ Znaleziono {len(stations)} stacji")
-
 
 def on_listbox_click(event):
     try:
         index = listbox.curselection()[0]
         station = station_data[index]
-        map_widget.set_position(station["lat"], station["lon"])
-        map_widget.set_zoom(16)
+        map_widget_stations.set_position(station["lat"], station["lon"])
+        map_widget_stations.set_zoom(16)
     except IndexError:
         pass
 
-
 # === GUI setup ===
 root = Tk()
-root.title("Zarządzanie stacjami paliw")
+root.title("Zarządzanie siecią stacji paliw")
 root.geometry("1200x700")
 
 # === Zakładki ===
 notebook = ttk.Notebook(root)
 notebook.pack(fill=BOTH, expand=True)
 
-# --- Zakładka STACJE ---
+# === Zakładka MAPA (pełna mapa) ===
+frame_map = Frame(notebook)
+notebook.add(frame_map, text="Mapa")
+
+map_widget_full = tkintermapview.TkinterMapView(frame_map, width=1200, height=650)
+map_widget_full.pack(fill=BOTH, expand=True)
+map_widget_full.set_position(52.0, 19.0)
+map_widget_full.set_zoom(6)
+
+# === Zakładka STACJE (formularz + mapa) ===
 frame_stations = Frame(notebook)
 notebook.add(frame_stations, text="Stacje")
 
@@ -78,10 +84,22 @@ listbox = Listbox(frame_left, width=50)
 listbox.pack(pady=10, fill=BOTH, expand=True)
 listbox.bind("<<ListboxSelect>>", on_listbox_click)
 
-map_widget = tkintermapview.TkinterMapView(frame_right, width=800, height=500)
-map_widget.pack(fill=BOTH, expand=True)
-map_widget.set_position(52.0, 19.0)
-map_widget.set_zoom(6)
+map_widget_stations = tkintermapview.TkinterMapView(frame_right, width=800, height=500)
+map_widget_stations.pack(fill=BOTH, expand=True)
+map_widget_stations.set_position(52.0, 19.0)
+map_widget_stations.set_zoom(6)
 
-# === START ===
+
+frame_employees = Frame(notebook)
+notebook.add(frame_employees, text="Pracownicy")
+
+Label(frame_employees, text="Moduł zarządzania pracownikami (w przygotowaniu)", font=("Arial", 14)).pack(pady=20)
+
+
+frame_customers = Frame(notebook)
+notebook.add(frame_customers, text="Klienci")
+
+Label(frame_customers, text="Moduł zarządzania klientami (w przygotowaniu)", font=("Arial", 14)).pack(pady=20)
+
+
 root.mainloop()
