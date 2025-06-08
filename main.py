@@ -11,7 +11,7 @@ station_data = []
 stations_tab_data = []
 stations_tab_markers = []
 
-employees_data = []
+employees = []
 
 # === FUNKCJE MAPY ===
 
@@ -196,31 +196,58 @@ notebook.bind("<<NotebookTabChanged>>", on_stations_tab_selected)
 
 # === ZAKŁADKA PRACOWNICY ===
 
+def add_employee():
+    name = entry_employee_name.get().strip()
+    surname = entry_employee_surname.get().strip()
+    try:
+        station_index = station_combobox.current()
+        station = stations_tab_data[station_index]
+        employees.append({"name": name, "surname": surname, "station": station})
+        update_employee_listbox()
+        entry_employee_name.delete(0, END)
+        entry_employee_surname.delete(0, END)
+        label_employees_info.config(text="✅ Dodano pracownika")
+    except IndexError:
+        label_employees_info.config(text="❗ Wybierz stację")
+
+def update_employee_listbox():
+    listbox_employees.delete(0, END)
+    for e in employees:
+        listbox_employees.insert(END, f"{e['name']} {e['surname']} → {e['station']['name']}")
+
+def update_station_combobox():
+    station_combobox['values'] = [s['name'] for s in stations_tab_data]
+
 frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
 
-frame_employees_left = Frame(frame_employees)
-frame_employees_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
+frame_emp_left = Frame(frame_employees)
+frame_emp_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
 
-frame_employees_right = Frame(frame_employees)
-frame_employees_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+frame_emp_right = Frame(frame_employees)
+frame_emp_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 
-Label(frame_employees_left, text="Imię:").pack(pady=(10, 0))
-entry_employee_name = Entry(frame_employees_left, width=30)
+Label(frame_emp_left, text="Imię:").pack()
+entry_employee_name = Entry(frame_emp_left, width=30)
 entry_employee_name.pack(pady=2)
 
-Label(frame_employees_left, text="Nazwisko:").pack()
-entry_employee_surname = Entry(frame_employees_left, width=30)
+Label(frame_emp_left, text="Nazwisko:").pack()
+entry_employee_surname = Entry(frame_emp_left, width=30)
 entry_employee_surname.pack(pady=2)
 
-Label(frame_employees_left, text="Stanowisko:").pack()
-entry_employee_role = Entry(frame_employees_left, width=30)
-entry_employee_role.pack(pady=2)
+Label(frame_emp_left, text="Stacja:").pack()
+station_combobox = ttk.Combobox(frame_emp_left, width=28, state="readonly")
+station_combobox.pack(pady=2)
 
-Button(frame_employees_left, text="Dodaj pracownika").pack(pady=5)
-Listbox(frame_employees_left, width=45, height=20).pack(pady=5, fill=Y)
+Button(frame_emp_left, text="Dodaj pracownika", command=add_employee).pack(pady=5)
 
-Label(frame_employees_right, text="Moduł zarządzania pracownikami – podstawowa wersja", font=("Arial", 14)).pack(pady=20)
+label_employees_info = Label(frame_emp_left, text="Brak akcji", fg="blue", wraplength=200)
+label_employees_info.pack(pady=10)
+
+listbox_employees = Listbox(frame_emp_left, width=50, height=25)
+listbox_employees.pack(pady=10)
+
+notebook.bind("<<NotebookTabChanged>>", lambda e: update_station_combobox())
 
 # === ZAKŁADKA KLIENCI ===
 
