@@ -103,6 +103,7 @@ def add_employee():
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
 
+
 def load_selected_employee():
     global editing_employee_index
     selected = tree_all_employees.selection()
@@ -364,6 +365,42 @@ Button(frame_customers_left, text="🗑️ Usuń zaznaczonego", command=delete_s
 
 label_customers_info = Label(frame_customers_left, text="Brak akcji", fg="blue")
 label_customers_info.pack(pady=5)
+
+# --- Mapa Pracownicy i Klienci ---
+frame_map_people = Frame(notebook)
+notebook.add(frame_map_people, text="Mapa Pracownicy i Klienci")
+
+map_widget_people = tkintermapview.TkinterMapView(frame_map_people, width=1150, height=700)
+map_widget_people.pack(fill=BOTH, expand=True)
+map_widget_people.set_position(52.0, 19.0)
+map_widget_people.set_zoom(6)
+
+def show_people_on_map():
+    map_widget_people.delete_all_marker()
+
+    # Pracownicy
+    for emp in employees_data:
+        loc = emp.get("location", "")
+        if loc:
+            try:
+                lat, lon = map(float, loc.split(","))
+                map_widget_people.set_marker(lat, lon, text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
+            except Exception as e:
+                print(f"Błąd lokalizacji pracownika: {e}")
+
+    # Klienci
+    for cust in customers_data:
+        station_name = cust.get("station", "")
+        station = next((s for s in station_data if s["name"] == station_name), None)
+        if station:
+            try:
+                lat = station["lat"]
+                lon = station["lon"]
+                map_widget_people.set_marker(lat, lon, text=f"🧑‍💼 {cust['name']} {cust['surname']}")
+            except Exception as e:
+                print(f"Błąd lokalizacji klienta: {e}")
+
+Button(frame_map_people, text="🔄 Odśwież dane na mapie", command=show_people_on_map).pack(pady=10)
 
 
 root.mainloop()
