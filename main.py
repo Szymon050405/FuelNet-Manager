@@ -1,16 +1,10 @@
+
 from tkinter import *
 from tkinter import ttk
 import tkintermapview
 
-# 👇 Przykładowa funkcja zamiast importu z utils
-def get_fuel_stations_near_city(city):
-    return [
-        {"name": "Stacja ORLEN", "lat": 52.2297, "lon": 21.0122},
-        {"name": "Stacja BP", "lat": 52.2370, "lon": 21.0150},
-        {"name": "Stacja LOTOS", "lat": 52.2300, "lon": 21.0200}
-    ]
+from utils import get_city_coordinates
 
-# Globalne dane
 station_markers = []
 station_data = []
 stations_tab_data = []
@@ -23,25 +17,35 @@ editing_customer_index = None
 
 # ----------------- STACJE ------------------
 
+from utils import get_fuel_stations_near_city  # dodaj na górze pliku main, jeśli jeszcze nie masz
+
 def find_stations():
     city = entry_city.get()
     if not city:
         label_info.config(text="❗ Podaj nazwę miejscowości")
         return
+
     listbox.delete(0, END)
     for m in station_markers:
         m.delete()
     station_markers.clear()
     station_data.clear()
-    stations = get_fuel_stations_near_city(city)
+
+    stations = get_fuel_stations_near_city(city)  # poprawne źródło danych
+
     if not stations:
         label_info.config(text="⚠️ Nie znaleziono stacji w okolicy.")
         return
+
     for station in stations:
-        marker = map_widget_mapa.set_marker(station["lat"], station["lon"], text=station["name"])
-        station_markers.append(marker)
-        station_data.append(station)
-        listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
+        try:
+            marker = map_widget_mapa.set_marker(station["lat"], station["lon"], text=station["name"])
+            station_markers.append(marker)
+            station_data.append(station)
+            listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
+        except KeyError as e:
+            print(f"Błąd w danych stacji: {e}")  # jeśli jakiś wpis nie ma 'lat', 'lon' lub 'name'
+
     map_widget_mapa.set_position(stations[0]["lat"], stations[0]["lon"])
     map_widget_mapa.set_zoom(13)
     label_info.config(text=f"✅ Znaleziono {len(stations)} stacji")
@@ -75,6 +79,8 @@ def delete_selected_station():
         marker = stations_tab_markers.pop(index)
         marker.delete()
         listbox_stations.delete(index)
+
+
     except IndexError:
         pass
 
@@ -83,7 +89,10 @@ def delete_selected_station():
 def update_employee_table():
     tree_all_employees.delete(*tree_all_employees.get_children())
     for emp in employees_data:
-        tree_all_employees.insert("", END, values=(emp['name'], emp['surname'], emp['role'], emp['station']))
+        location = emp.get("location", "")
+        tree_all_employees.insert("", END, values=(
+            emp['name'], emp['surname'], emp['role'], emp['station'], location
+        ))
 
 def add_employee():
     global editing_employee_index
@@ -91,18 +100,30 @@ def add_employee():
     surname = entry_employee_surname.get().strip()
     role = entry_employee_role.get().strip()
     station = entry_station_name.get().strip()
+    lat = entry_employee_lat.get().strip()
+    lon = entry_employee_lon.get().strip()
+
     if name and surname and role and station:
-        employees_data.append({"name": name, "surname": surname, "role": role, "station": station})
+        location = f"{lat},{lon}" if lat and lon else ""
+        employees_data.append({
+            "name": name,
+            "surname": surname,
+            "role": role,
+            "station": station,
+            "location": location
+        })
+        # Reset fields
         entry_employee_name.delete(0, END)
         entry_employee_surname.delete(0, END)
         entry_employee_role.delete(0, END)
         entry_station_name.delete(0, END)
+        entry_employee_lat.delete(0, END)
+        entry_employee_lon.delete(0, END)
         editing_employee_index = None
         update_employee_table()
         label_employees_info.config(text="✅ Dodano pracownika")
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
-
 
 def load_selected_employee():
     global editing_employee_index
@@ -120,6 +141,17 @@ def load_selected_employee():
     entry_employee_role.insert(0, emp["role"])
     entry_station_name.delete(0, END)
     entry_station_name.insert(0, emp["station"])
+
+    if "location" in emp and "," in emp["location"]:
+        lat, lon = emp["location"].split(",")
+        entry_employee_lat.delete(0, END)
+        entry_employee_lat.insert(0, lat)
+        entry_employee_lon.delete(0, END)
+        entry_employee_lon.insert(0, lon)
+    else:
+        entry_employee_lat.delete(0, END)
+        entry_employee_lon.delete(0, END)
+
     editing_employee_index = index
     label_employees_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
 
@@ -132,12 +164,22 @@ def edit_selected_employee():
     surname = entry_employee_surname.get().strip()
     role = entry_employee_role.get().strip()
     station = entry_station_name.get().strip()
+    lat = entry_employee_lat.get().strip()
+    lon = entry_employee_lon.get().strip()
+
     if name and surname and role and station:
+        location = f"{lat},{lon}" if lat and lon else ""
         emp = employees_data[editing_employee_index]
-        emp.update({"name": name, "surname": surname, "role": role, "station": station})
+        emp.update({
+            "name": name,
+            "surname": surname,
+            "role": role,
+            "station": station,
+            "location": location
+        })
         update_employee_table()
-        label_employees_info.config(text="✅ Zapisano zmiany")
         editing_employee_index = None
+        label_employees_info.config(text="✅ Zapisano zmiany")
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
 
@@ -175,24 +217,34 @@ def update_customer_tables():
         customers_by_station[station].insert("", END, values=(customer["name"], customer["surname"], customer["email"], customer["phone"]))
 
 def add_customer():
-    global editing_customer_index
-    name = entry_customer_name.get().strip()
-    surname = entry_customer_surname.get().strip()
-    email = entry_customer_email.get().strip()
-    phone = entry_customer_phone.get().strip()
-    station = entry_customer_station.get().strip()
-    if name and surname and email and phone and station:
-        customers_data.append({"name": name, "surname": surname, "email": email, "phone": phone, "station": station})
-        update_customer_tables()
-        entry_customer_name.delete(0, END)
-        entry_customer_surname.delete(0, END)
-        entry_customer_email.delete(0, END)
-        entry_customer_phone.delete(0, END)
-        entry_customer_station.delete(0, END)
-        editing_customer_index = None
-        label_customers_info.config(text=f"✅ Dodano klienta do stacji: {station}")
-    else:
-        label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
+    def add_customer():
+        global editing_customer_index
+        name = entry_customer_name.get().strip()
+        surname = entry_customer_surname.get().strip()
+        email = entry_customer_email.get().strip()
+        phone = entry_customer_phone.get().strip()
+        station = entry_customer_station.get().strip()
+        lat = entry_customer_lat.get().strip()
+        lon = entry_customer_lon.get().strip()
+
+        if name and surname and email and phone and station:
+            location = f"{lat},{lon}" if lat and lon else ""
+            customers_data.append({
+                "name": name,
+                "surname": surname,
+                "email": email,
+                "phone": phone,
+                "station": station,
+                "location": location
+            })
+            update_customer_tables()
+            for entry in [entry_customer_name, entry_customer_surname, entry_customer_email,
+                          entry_customer_phone, entry_customer_station, entry_customer_lat, entry_customer_lon]:
+                entry.delete(0, END)
+            editing_customer_index = None
+            label_customers_info.config(text=f"✅ Dodano klienta do stacji: {station}")
+        else:
+            label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
 
 def load_selected_customer():
     global editing_customer_index
@@ -201,6 +253,7 @@ def load_selected_customer():
         if selected:
             index = tree.index(selected[0])
             customer = [c for c in customers_data if c["station"] == station][index]
+
             entry_customer_name.delete(0, END)
             entry_customer_name.insert(0, customer["name"])
             entry_customer_surname.delete(0, END)
@@ -211,8 +264,21 @@ def load_selected_customer():
             entry_customer_phone.insert(0, customer["phone"])
             entry_customer_station.delete(0, END)
             entry_customer_station.insert(0, customer["station"])
+
+            location = customer.get("location", "")
+            if "," in location:
+                lat, lon = location.split(",")
+                entry_customer_lat.delete(0, END)
+                entry_customer_lat.insert(0, lat)
+                entry_customer_lon.delete(0, END)
+                entry_customer_lon.insert(0, lon)
+            else:
+                entry_customer_lat.delete(0, END)
+                entry_customer_lon.delete(0, END)
+
             editing_customer_index = customers_data.index(customer)
             label_customers_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
+            break
             break
 
 def edit_selected_customer():
@@ -220,14 +286,26 @@ def edit_selected_customer():
     if editing_customer_index is None:
         label_customers_info.config(text="❗ Wybierz klienta do edycji")
         return
+
     name = entry_customer_name.get().strip()
     surname = entry_customer_surname.get().strip()
     email = entry_customer_email.get().strip()
     phone = entry_customer_phone.get().strip()
     station = entry_customer_station.get().strip()
+    lat = entry_customer_lat.get().strip()
+    lon = entry_customer_lon.get().strip()
+
     if name and surname and email and phone and station:
+        location = f"{lat},{lon}" if lat and lon else ""
         customer = customers_data[editing_customer_index]
-        customer.update({"name": name, "surname": surname, "email": email, "phone": phone, "station": station})
+        customer.update({
+            "name": name,
+            "surname": surname,
+            "email": email,
+            "phone": phone,
+            "station": station,
+            "location": location
+        })
         update_customer_tables()
         editing_customer_index = None
         label_customers_info.config(text="✅ Zapisano zmiany")
@@ -271,6 +349,8 @@ Button(frame_left, text="➡️ Przenieś zaznaczoną stację do zakładki: STAC
 Button(frame_left, text="➡️ Przejdź do zakładki: PRACOWNICY", command=lambda: notebook.select(frame_employees)).pack(pady=2, fill=X)
 Button(frame_left, text="➡️ Przejdź do zakładki: KLIENCI", command=lambda: notebook.select(frame_customers)).pack(pady=2, fill=X)
 
+
+
 label_info = Label(frame_left, text="", fg="blue")
 label_info.pack(pady=5)
 listbox = Listbox(frame_left, width=50)
@@ -294,6 +374,7 @@ listbox_stations = Listbox(frame_stations_left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
 Button(frame_stations_left, text="🗑️ Usuń zaznaczoną stację", command=delete_selected_station).pack(pady=2, fill=X)
 
+
 map_widget_stations = tkintermapview.TkinterMapView(frame_stations_right, width=800, height=450)
 map_widget_stations.pack(fill=BOTH, expand=True)
 map_widget_stations.set_position(52.0, 19.0)
@@ -307,18 +388,25 @@ frame_employees_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
 frame_employees_right = Frame(frame_employees)
 frame_employees_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 
-Label(frame_employees_left, text="Imię: ").pack()
+Label(frame_employees_left, text="Imię:").pack()
 entry_employee_name = Entry(frame_employees_left, width=30)
-entry_employee_name.pack(pady=2)
-Label(frame_employees_left, text="Nazwisko: ").pack()
+entry_employee_name.pack()
+Label(frame_employees_left, text="Nazwisko:").pack()
 entry_employee_surname = Entry(frame_employees_left, width=30)
-entry_employee_surname.pack(pady=2)
-Label(frame_employees_left, text="Stanowisko: ").pack()
+entry_employee_surname.pack()
+Label(frame_employees_left, text="Stanowisko:").pack()
 entry_employee_role = Entry(frame_employees_left, width=30)
-entry_employee_role.pack(pady=2)
-Label(frame_employees_left, text="Stacja: ").pack()
+entry_employee_role.pack()
+Label(frame_employees_left, text="Stacja:").pack()
 entry_station_name = Entry(frame_employees_left, width=30)
-entry_station_name.pack(pady=2)
+entry_station_name.pack()
+
+Label(frame_employees_left, text="Szerokość (lat):").pack()
+entry_employee_lat = Entry(frame_employees_left, width=30)
+entry_employee_lat.pack(pady=2)
+Label(frame_employees_left, text="Długość (lon):").pack()
+entry_employee_lon = Entry(frame_employees_left, width=30)
+entry_employee_lon.pack(pady=2)
 
 Button(frame_employees_left, text="Dodaj pracownika", command=add_employee).pack(pady=5)
 Button(frame_employees_left, text="✏️ Wczytaj do edycji", command=load_selected_employee).pack(pady=2)
@@ -328,12 +416,15 @@ Button(frame_employees_left, text="🗑️ Usuń zaznaczonego", command=delete_s
 label_employees_info = Label(frame_employees_left, text="Brak akcji", fg="blue")
 label_employees_info.pack(pady=5)
 
-tree_all_employees = ttk.Treeview(frame_employees_right, columns=("Imię", "Nazwisko", "Stanowisko", "Stacja"), show='headings')
-for col in ("Imię", "Nazwisko", "Stanowisko", "Stacja"):
+tree_all_employees = ttk.Treeview(
+    frame_employees_right,
+    columns=("Imię", "Nazwisko", "Stanowisko", "Stacja", "Lokalizacja"),
+    show='headings'
+)
+for col in ("Imię", "Nazwisko", "Stanowisko", "Stacja", "Lokalizacja"):
     tree_all_employees.heading(col, text=col)
-    tree_all_employees.column(col, width=150)
+    tree_all_employees.column(col, width=130)
 tree_all_employees.pack(fill=BOTH, expand=True)
-
 # --- Klienci ---
 frame_customers = Frame(notebook)
 notebook.add(frame_customers, text="Klienci")
@@ -357,6 +448,12 @@ entry_customer_phone.pack(pady=2)
 Label(frame_customers_left, text="Stacja: ").pack()
 entry_customer_station = Entry(frame_customers_left, width=30)
 entry_customer_station.pack(pady=2)
+Label(frame_customers_left, text="Szerokość (lat): ").pack()
+entry_customer_lat = Entry(frame_customers_left, width=30)
+entry_customer_lat.pack(pady=2)
+Label(frame_customers_left, text="Długość (lon): ").pack()
+entry_customer_lon = Entry(frame_customers_left, width=30)
+entry_customer_lon.pack(pady=2)
 
 Button(frame_customers_left, text="Dodaj klienta", command=add_customer).pack(pady=5)
 Button(frame_customers_left, text="✏️ Wczytaj do edycji", command=load_selected_customer).pack(pady=2)
@@ -377,6 +474,35 @@ map_widget_people.set_zoom(6)
 
 def show_people_on_map():
     map_widget_people.delete_all_marker()
+
+    # Pracownicy
+    for emp in employees_data:
+        loc = emp.get("location", "")
+        if loc:
+            try:
+                lat, lon = map(float, loc.split(","))
+                map_widget_people.set_marker(lat, lon, text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
+            except Exception as e:
+                print(f"Błąd lokalizacji pracownika: {e}")
+
+    # Klienci
+    for cust in customers_data:
+        loc = cust.get("location", "")
+        if loc:
+            try:
+                lat, lon = map(float, loc.split(","))
+                map_widget_people.set_marker(lat, lon, text=f"🧑‍💼 {cust['name']} {cust['surname']}")
+            except Exception as e:
+                print(f"Błąd lokalizacji klienta: {e}")
+        else:
+            # Fallback – spróbuj znaleźć lokalizację na podstawie stacji
+            station_name = cust.get("station", "")
+            station = next((s for s in station_data if s["name"] == station_name), None)
+            if station:
+                try:
+                    map_widget_people.set_marker(station["lat"], station["lon"], text=f"🧑‍💼 {cust['name']} {cust['surname']}")
+                except Exception as e:
+                    print(f"Błąd lokalizacji klienta przez stację: {e}")
 
     # Pracownicy
     for emp in employees_data:
