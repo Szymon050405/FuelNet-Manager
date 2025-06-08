@@ -618,4 +618,5 @@ def show_people_on_map():
 Button(frame_map_people, text="🔄 Odśwież dane na mapie", command=show_people_on_map).pack(pady=10)
 
 
+
 root.mainloop()
