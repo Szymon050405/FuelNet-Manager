@@ -1,4 +1,3 @@
-
 from tkinter import *
 from tkinter import ttk
 import tkintermapview
@@ -20,42 +19,18 @@ editing_customer_index = None
 
 from utils import get_fuel_stations_near_city  # dodaj na górze pliku main, jeśli jeszcze nie masz
 
+
 def find_stations():
     city = entry_city.get()
     if not city:
         label_info.config(text="❗ Podaj nazwę miejscowości")
         return
 
-    def rename_selected_station():
-        index = listbox_stations.curselection()
-        if not index:
-            return
-        index = index[0]
-        station = stations_tab_data[index]
-
-        def apply_new_name():
-            new_name = entry_new_name.get().strip()
-            if new_name:
-                station["name"] = new_name
-                listbox_stations.delete(index)
-                listbox_stations.insert(index, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
-                stations_tab_markers[index].set_text(new_name)
-                rename_window.destroy()
-
-        rename_window = Toplevel()
-        rename_window.title("Zmień nazwę stacji")
-        Label(rename_window, text="Nowa nazwa stacji:").pack(pady=5)
-        entry_new_name = Entry(rename_window, width=40)
-        entry_new_name.pack(pady=5)
-        entry_new_name.insert(0, station["name"])
-        Button(rename_window, text="Zapisz", command=apply_new_name).pack(pady=10)
-
     listbox.delete(0, END)
     for m in station_markers:
         m.delete()
     station_markers.clear()
     station_data.clear()
-
 
     stations = get_fuel_stations_near_city(city)  # poprawne źródło danych
 
@@ -76,6 +51,32 @@ def find_stations():
     map_widget_mapa.set_zoom(13)
     label_info.config(text=f"✅ Znaleziono {len(stations)} stacji")
 
+
+def rename_selected_station():
+    index = listbox_stations.curselection()
+    if not index:
+        return
+    index = index[0]
+    station = stations_tab_data[index]
+
+    def apply_new_name():
+        new_name = entry_new_name.get().strip()
+        if new_name:
+            station["name"] = new_name
+            listbox_stations.delete(index)
+            listbox_stations.insert(index, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
+            stations_tab_markers[index].set_text(new_name)
+            rename_window.destroy()
+
+    rename_window = Toplevel()
+    rename_window.title("Zmień nazwę stacji")
+    Label(rename_window, text="Nowa nazwa stacji:").pack(pady=5)
+    entry_new_name = Entry(rename_window, width=40)
+    entry_new_name.pack(pady=5)
+    entry_new_name.insert(0, station["name"])
+    Button(rename_window, text="Zapisz", command=apply_new_name).pack(pady=10)
+
+
 def on_listbox_click(event):
     try:
         index = listbox.curselection()[0]
@@ -84,6 +85,7 @@ def on_listbox_click(event):
         map_widget_mapa.set_zoom(16)
     except IndexError:
         pass
+
 
 def move_selected_station_to_tab():
     try:
@@ -98,6 +100,7 @@ def move_selected_station_to_tab():
     except IndexError:
         label_info.config(text="❗ Zaznacz stację na liście")
 
+
 def delete_selected_station():
     try:
         index = listbox_stations.curselection()[0]
@@ -105,22 +108,23 @@ def delete_selected_station():
         marker = stations_tab_markers.pop(index)
         marker.delete()
         listbox_stations.delete(index)
-
-
     except IndexError:
         pass
+
 
 # ----------------- PRACOWNICY ------------------
 
 def create_employee_table_for_station(station_name):
     label = Label(frame_employees_right, text=f"📍 Pracownicy stacji: {station_name}", font=("Arial", 12, "bold"))
     label.pack(pady=(10, 0))
-    tree = ttk.Treeview(frame_employees_right, columns=("Imię", "Nazwisko", "Stanowisko", "Lokalizacja"), show='headings')
+    tree = ttk.Treeview(frame_employees_right, columns=("Imię", "Nazwisko", "Stanowisko", "Lokalizacja"),
+                        show='headings')
     for col in ("Imię", "Nazwisko", "Stanowisko", "Lokalizacja"):
         tree.heading(col, text=col)
         tree.column(col, width=130)
     tree.pack(pady=5, fill=X)
     employees_by_station[station_name] = tree
+
 
 def update_employee_tables():
     for tree in employees_by_station.values():
@@ -133,6 +137,7 @@ def update_employee_tables():
         employees_by_station[station].insert("", END, values=(
             emp["name"], emp["surname"], emp["role"], location
         ))
+
 
 def add_employee():
     global editing_employee_index
@@ -160,6 +165,7 @@ def add_employee():
         label_employees_info.config(text="✅ Dodano pracownika")
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
+
 
 def load_selected_employee():
     global editing_employee_index
@@ -189,6 +195,7 @@ def load_selected_employee():
             label_employees_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
             break
 
+
 def edit_selected_employee():
     global editing_employee_index
     if editing_employee_index is None:
@@ -217,6 +224,7 @@ def edit_selected_employee():
     else:
         label_employees_info.config(text="❗ Uzupełnij wszystkie pola")
 
+
 def delete_selected_employee():
     global editing_employee_index
     for station, tree in employees_by_station.items():
@@ -230,6 +238,7 @@ def delete_selected_employee():
             label_employees_info.config(text="🗑️ Usunięto pracownika")
             break
 
+
 # ----------------- KLIENCI ------------------
 
 def create_customer_table_for_station(station_name):
@@ -242,6 +251,7 @@ def create_customer_table_for_station(station_name):
     tree.pack(pady=5, fill=X)
     customers_by_station[station_name] = tree
 
+
 def update_customer_tables():
     for tree in customers_by_station.values():
         tree.delete(*tree.get_children())
@@ -253,6 +263,7 @@ def update_customer_tables():
             customer["name"], customer["surname"], customer["email"], customer["phone"]
         ))
 
+
 def update_all_customers_table():
     tree_all_customers.delete(*tree_all_customers.get_children())
     for cust in customers_data:
@@ -261,6 +272,7 @@ def update_all_customers_table():
             cust["name"], cust["surname"], cust["email"],
             cust["phone"], cust["station"], location
         ))
+
 
 def add_customer():
     global editing_customer_index
@@ -282,7 +294,7 @@ def add_customer():
             "station": station,
             "location": location
         })
-        update_customer_tables()           # 👈 tworzy nową tabelę dla nowej stacji jeśli trzeba
+        update_customer_tables()  # 👈 tworzy nową tabelę dla nowej stacji jeśli trzeba
         update_all_customers_table()
         for entry in [entry_customer_name, entry_customer_surname, entry_customer_email,
                       entry_customer_phone, entry_customer_station, entry_customer_lat, entry_customer_lon]:
@@ -291,6 +303,7 @@ def add_customer():
         label_customers_info.config(text=f"✅ Dodano klienta do stacji: {station}")
     else:
         label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
+
 
 def load_customer_from_table():
     global editing_customer_index
@@ -324,6 +337,7 @@ def load_customer_from_table():
     editing_customer_index = index
     label_customers_info.config(text="✏️ Edytuj dane i kliknij ZAPISZ")
 
+
 def edit_selected_customer():
     global editing_customer_index
     if editing_customer_index is None:
@@ -355,6 +369,7 @@ def edit_selected_customer():
     else:
         label_customers_info.config(text="❗ Uzupełnij wszystkie pola")
 
+
 def create_customer_table_for_station(station_name):
     label = Label(frame_customers_right, text=f"📍 Klienci stacji: {station_name}", font=("Arial", 12, "bold"))
     label.pack(pady=(10, 0))
@@ -364,6 +379,7 @@ def create_customer_table_for_station(station_name):
         tree.column(col, width=130)
     tree.pack(pady=5, fill=X)
     customers_by_station[station_name] = tree
+
 
 def delete_selected_customer():
     global editing_customer_index
@@ -377,6 +393,7 @@ def delete_selected_customer():
             editing_customer_index = None
             label_customers_info.config(text="🗑️ Usunięto klienta")
             break
+
 
 # -------------------------- GUI --------------------------
 
@@ -398,11 +415,12 @@ Label(frame_left, text="Miejscowość:").pack(pady=5)
 entry_city = Entry(frame_left, width=30)
 entry_city.pack(pady=5)
 Button(frame_left, text="Szukaj stacji", command=find_stations).pack(pady=10)
-Button(frame_left, text="➡️ Przenieś zaznaczoną stację do zakładki: STACJE", command=move_selected_station_to_tab).pack(pady=2, fill=X)
-Button(frame_left, text="➡️ Przejdź do zakładki: PRACOWNICY", command=lambda: notebook.select(frame_employees)).pack(pady=2, fill=X)
-Button(frame_left, text="➡️ Przejdź do zakładki: KLIENCI", command=lambda: notebook.select(frame_customers)).pack(pady=2, fill=X)
-
-
+Button(frame_left, text="➡️ Przenieś zaznaczoną stację do zakładki: STACJE", command=move_selected_station_to_tab).pack(
+    pady=2, fill=X)
+Button(frame_left, text="➡️ Przejdź do zakładki: PRACOWNICY", command=lambda: notebook.select(frame_employees)).pack(
+    pady=2, fill=X)
+Button(frame_left, text="➡️ Przejdź do zakładki: KLIENCI", command=lambda: notebook.select(frame_customers)).pack(
+    pady=2, fill=X)
 
 label_info = Label(frame_left, text="", fg="blue")
 label_info.pack(pady=5)
@@ -426,7 +444,7 @@ frame_stations_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 listbox_stations = Listbox(frame_stations_left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
 Button(frame_stations_left, text="🗑️ Usuń zaznaczoną stację", command=delete_selected_station).pack(pady=2, fill=X)
-
+Button(frame_stations_left, text="✏️ Zmień nazwę stacji", command=rename_selected_station).pack(pady=2, fill=X)
 
 map_widget_stations = tkintermapview.TkinterMapView(frame_stations_right, width=800, height=450)
 map_widget_stations.pack(fill=BOTH, expand=True)
@@ -478,6 +496,7 @@ for col in ("Imię", "Nazwisko", "Stanowisko", "Stacja", "Lokalizacja"):
     tree_all_employees.heading(col, text=col)
     tree_all_employees.column(col, width=130)
 tree_all_employees.pack(fill=BOTH, expand=True)
+
 # --- Klienci ---
 frame_customers = Frame(notebook)
 notebook.add(frame_customers, text="Klienci")
@@ -490,7 +509,6 @@ tree_all_customers = ttk.Treeview(
     columns=("Imię", "Nazwisko", "Email", "Telefon", "Stacja", "Lokalizacja"),
     show='headings'
 )
-
 
 for col in ("Imię", "Nazwisko", "Email", "Telefon", "Stacja", "Lokalizacja"):
     tree_all_customers.heading(col, text=col)
@@ -531,13 +549,15 @@ label_customers_info.pack(pady=5)
 frame_map_employees = Frame(notebook)
 notebook.add(frame_map_employees, text="Mapa Pracownicy")
 
-btn_refresh_employees_map = Button(frame_map_employees, text="🔄 Odśwież dane na mapie", command=lambda: show_employees_on_map())
+btn_refresh_employees_map = Button(frame_map_employees, text="🔄 Odśwież dane na mapie",
+                                   command=lambda: show_employees_on_map())
 btn_refresh_employees_map.pack(side=TOP, fill=X, pady=(10, 5))
 
 map_widget_employees = tkintermapview.TkinterMapView(frame_map_employees, width=1150, height=700)
 map_widget_employees.pack(fill=BOTH, expand=True)
 map_widget_employees.set_position(52.0, 19.0)
 map_widget_employees.set_zoom(6)
+
 
 def show_employees_on_map():
     map_widget_employees.delete_all_marker()
@@ -554,21 +574,25 @@ def show_employees_on_map():
         station = next((s for s in station_data if s["name"] == emp.get("station", "")), None)
         if station:
             try:
-                map_widget_employees.set_marker(station["lat"], station["lon"], text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
+                map_widget_employees.set_marker(station["lat"], station["lon"],
+                                                text=f"👷 {emp['name']} {emp['surname']} ({emp['role']})")
             except Exception as e:
                 print(f"Błąd lokalizacji pracownika przez stację: {e}")
+
 
 # --- Mapa Klienci ---
 frame_map_customers = Frame(notebook)
 notebook.add(frame_map_customers, text="Mapa Klienci")
 
-btn_refresh_customers_map = Button(frame_map_customers, text="🔄 Odśwież dane na mapie", command=lambda: show_customers_on_map())
+btn_refresh_customers_map = Button(frame_map_customers, text="🔄 Odśwież dane na mapie",
+                                   command=lambda: show_customers_on_map())
 btn_refresh_customers_map.pack(side=TOP, fill=X, pady=(10, 5))
 
 map_widget_customers = tkintermapview.TkinterMapView(frame_map_customers, width=1150, height=700)
 map_widget_customers.pack(fill=BOTH, expand=True)
 map_widget_customers.set_position(52.0, 19.0)
 map_widget_customers.set_zoom(6)
+
 
 def show_customers_on_map():
     map_widget_customers.delete_all_marker()
@@ -585,7 +609,8 @@ def show_customers_on_map():
         station = next((s for s in station_data if s["name"] == cust.get("station", "")), None)
         if station:
             try:
-                map_widget_customers.set_marker(station["lat"], station["lon"], text=f"🧑‍💼 {cust['name']} {cust['surname']}")
+                map_widget_customers.set_marker(station["lat"], station["lon"],
+                                                text=f"🧑‍💼 {cust['name']} {cust['surname']}")
             except Exception as e:
                 print(f"Błąd lokalizacji klienta przez stację: {e}")
 
