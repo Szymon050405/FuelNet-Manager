@@ -3,8 +3,6 @@ from tkinter import ttk
 import tkintermapview
 from utils import get_fuel_stations_near_city
 
-# === GLOBALNE DANE ===
-
 station_markers = []
 station_data = []
 
@@ -13,8 +11,6 @@ stations_tab_markers = []
 
 employees_data = []
 editing_employee_index = None
-
-# === FUNKCJE MAPY ===
 
 def find_stations():
     city = entry_city.get()
@@ -61,11 +57,20 @@ def move_selected_station_to_tab():
             stations_tab_data.append(station)
             marker = map_widget_stations.set_marker(station["lat"], station["lon"], text=station["name"])
             stations_tab_markers.append(marker)
+            listbox_stations.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
         notebook.select(frame_stations)
     except IndexError:
         label_info.config(text="❗ Zaznacz stację na liście")
 
-# === GUI APLIKACJI ===
+def delete_selected_station():
+    try:
+        index = listbox_stations.curselection()[0]
+        stations_tab_data.pop(index)
+        marker = stations_tab_markers.pop(index)
+        marker.delete()
+        listbox_stations.delete(index)
+    except IndexError:
+        pass
 
 root = Tk()
 root.title("Zarządzanie siecią stacji paliw")
@@ -73,8 +78,6 @@ root.geometry("1200x750")
 
 notebook = ttk.Notebook(root)
 notebook.pack(fill=BOTH, expand=True)
-
-# === ZAKŁADKA MAPA ===
 
 frame_map = Frame(notebook)
 notebook.add(frame_map, text="Mapa")
@@ -106,8 +109,6 @@ map_widget_mapa.pack(fill=BOTH, expand=True)
 map_widget_mapa.set_position(52.0, 19.0)
 map_widget_mapa.set_zoom(6)
 
-# === ZAKŁADKA STACJE ===
-
 frame_stations = Frame(notebook)
 notebook.add(frame_stations, text="Stacje")
 
@@ -120,12 +121,12 @@ frame_stations_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 listbox_stations = Listbox(frame_stations_left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
 
+Button(frame_stations_left, text="🗑️ Usuń zaznaczoną stację", command=delete_selected_station).pack(pady=2, fill=X)
+
 map_widget_stations = tkintermapview.TkinterMapView(frame_stations_right, width=800, height=450)
 map_widget_stations.pack(fill=BOTH, expand=True)
 map_widget_stations.set_position(52.0, 19.0)
 map_widget_stations.set_zoom(6)
-
-# === ZAKŁADKA PRACOWNICY ===
 
 frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
@@ -256,8 +257,6 @@ def delete_selected_employee():
     update_employee_table()
     editing_employee_index = None
     label_employees_info.config(text="🗑️ Usunięto pracownika")
-
-# === ZAKŁADKA KLIENCI ===
 
 frame_customers = Frame(notebook)
 notebook.add(frame_customers, text="Klienci")
