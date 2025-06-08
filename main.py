@@ -26,11 +26,36 @@ def find_stations():
         label_info.config(text="❗ Podaj nazwę miejscowości")
         return
 
+    def rename_selected_station():
+        index = listbox_stations.curselection()
+        if not index:
+            return
+        index = index[0]
+        station = stations_tab_data[index]
+
+        def apply_new_name():
+            new_name = entry_new_name.get().strip()
+            if new_name:
+                station["name"] = new_name
+                listbox_stations.delete(index)
+                listbox_stations.insert(index, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
+                stations_tab_markers[index].set_text(new_name)
+                rename_window.destroy()
+
+        rename_window = Toplevel()
+        rename_window.title("Zmień nazwę stacji")
+        Label(rename_window, text="Nowa nazwa stacji:").pack(pady=5)
+        entry_new_name = Entry(rename_window, width=40)
+        entry_new_name.pack(pady=5)
+        entry_new_name.insert(0, station["name"])
+        Button(rename_window, text="Zapisz", command=apply_new_name).pack(pady=10)
+
     listbox.delete(0, END)
     for m in station_markers:
         m.delete()
     station_markers.clear()
     station_data.clear()
+
 
     stations = get_fuel_stations_near_city(city)  # poprawne źródło danych
 
@@ -72,6 +97,31 @@ def move_selected_station_to_tab():
         notebook.select(frame_stations)
     except IndexError:
         label_info.config(text="❗ Zaznacz stację na liście")
+
+def rename_selected_station():
+    index = listbox_stations.curselection()
+    if not index:
+        label_info.config(text="❗ Zaznacz stację do zmiany nazwy")
+        return
+    index = index[0]
+    station = stations_tab_data[index]
+
+    def apply_new_name():
+        new_name = entry_new_name.get().strip()
+        if new_name:
+            station["name"] = new_name
+            listbox_stations.delete(index)
+            listbox_stations.insert(index, f"{new_name} – {station['lat']:.5f}, {station['lon']:.5f}")
+            stations_tab_markers[index].set_text(new_name)
+            rename_window.destroy()
+
+    rename_window = Toplevel()
+    rename_window.title("Zmień nazwę stacji")
+    Label(rename_window, text="Nowa nazwa stacji:").pack(pady=5)
+    entry_new_name = Entry(rename_window, width=40)
+    entry_new_name.pack(pady=5)
+    entry_new_name.insert(0, station["name"])
+    Button(rename_window, text="Zapisz", command=apply_new_name).pack(pady=10)
 
 def delete_selected_station():
     try:
@@ -401,7 +451,7 @@ frame_stations_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
 listbox_stations = Listbox(frame_stations_left, width=45, height=25)
 listbox_stations.pack(pady=10, fill=Y)
 Button(frame_stations_left, text="🗑️ Usuń zaznaczoną stację", command=delete_selected_station).pack(pady=2, fill=X)
-
+Button(frame_stations_left, text="✏️ Zmień nazwę stacji", command=rename_selected_station).pack(pady=2, fill=X)
 
 map_widget_stations = tkintermapview.TkinterMapView(frame_stations_right, width=800, height=450)
 map_widget_stations.pack(fill=BOTH, expand=True)
