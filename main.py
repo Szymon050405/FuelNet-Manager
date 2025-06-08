@@ -3,12 +3,18 @@ from tkinter import ttk
 import tkintermapview
 from utils import get_fuel_stations_near_city
 
+# === GLOBALNE DANE ===
+
 station_markers = []
 station_data = []
 
+stations_tab_data = []
+stations_tab_markers = []
+
+# === FUNKCJE MAPY ===
+
 def find_stations():
     city = entry_city.get()
-
     if not city:
         label_info.config(text="❗ Podaj nazwę miejscowości")
         return
@@ -44,12 +50,28 @@ def on_listbox_click(event):
     except IndexError:
         pass
 
+def move_selected_station_to_tab():
+    try:
+        index = listbox.curselection()[0]
+        station = station_data[index]
+        if station not in stations_tab_data:
+            stations_tab_data.append(station)
+            marker = map_widget_stations.set_marker(station["lat"], station["lon"], text=station["name"])
+            stations_tab_markers.append(marker)
+        notebook.select(frame_stations)
+    except IndexError:
+        label_info.config(text="❗ Zaznacz stację na liście")
+
+# === GUI APLIKACJI ===
+
 root = Tk()
 root.title("Zarządzanie siecią stacji paliw")
-root.geometry("1200x700")
+root.geometry("1200x750")
 
 notebook = ttk.Notebook(root)
 notebook.pack(fill=BOTH, expand=True)
+
+# === ZAKŁADKA MAPA ===
 
 frame_map = Frame(notebook)
 notebook.add(frame_map, text="Mapa")
@@ -66,10 +88,10 @@ entry_city.pack(pady=5)
 
 Button(frame_left, text="Szukaj stacji", command=find_stations).pack(pady=10)
 
-# Nowe 3 przyciski – pod "Szukaj"
-Button(frame_left, text="Przenieś stacje do zakładki").pack(pady=2, fill=X)
-Button(frame_left, text="Przenieś pracowników do zakładki").pack(pady=2, fill=X)
-Button(frame_left, text="Przenieś klientów do zakładki").pack(pady=2, fill=X)
+# PRZYCISKI NAWIGACYJNE Z DOPISKIEM
+Button(frame_left, text="➡️ Przenieś zaznaczoną stację do zakładki: STACJE", command=move_selected_station_to_tab).pack(pady=2, fill=X)
+Button(frame_left, text="➡️ Przejdź do zakładki: PRACOWNICY", command=lambda: notebook.select(frame_employees)).pack(pady=2, fill=X)
+Button(frame_left, text="➡️ Przejdź do zakładki: KLIENCI", command=lambda: notebook.select(frame_customers)).pack(pady=2, fill=X)
 
 label_info = Label(frame_left, text="", fg="blue")
 label_info.pack(pady=5)
@@ -83,19 +105,103 @@ map_widget_mapa.pack(fill=BOTH, expand=True)
 map_widget_mapa.set_position(52.0, 19.0)
 map_widget_mapa.set_zoom(6)
 
+# === ZAKŁADKA STACJE ===
+
+def update_station_listbox():
+    listbox_stations.delete(0, END)
+    for i, s in enumerate(stations_tab_data):
+        listbox_stations.insert(i, f"{i+1}. {s['name']} – {s['lat']:.5f}, {s['lon']:.5f}")
+
+def show_selected_station_on_map():
+    try:
+        index = listbox_stations.curselection()[0]
+        s = stations_tab_data[index]
+        map_widget_stations.set_position(s["lat"], s["lon"])
+        map_widget_stations.set_zoom(15)
+        label_stations_info.config(text=f"{s['name']} ({s['lat']:.4f}, {s['lon']:.4f})")
+    except IndexError:
+        label_stations_info.config(text="❗ Wybierz stację")
+
+def delete_station():
+    try:
+        index = listbox_stations.curselection()[0]
+        stations_tab_markers[index].delete()
+        stations_tab_data.pop(index)
+        stations_tab_markers.pop(index)
+        update_station_listbox()
+        label_stations_info.config(text="🗑️ Stacja usunięta")
+    except IndexError:
+        label_stations_info.config(text="❗ Nie wybrano stacji")
+
+def edit_station():
+    try:
+        index = listbox_stations.curselection()[0]
+        entry_station_name.delete(0, END)
+        entry_station_name.insert(0, stations_tab_data[index]['name'])
+        button_edit.config(text="Zapisz", command=lambda: save_station_name(index))
+        label_stations_info.config(text="✏️ Edytuj nazwę i kliknij Zapisz")
+    except IndexError:
+        label_stations_info.config(text="❗ Wybierz stację do edycji")
+
+def save_station_name(index):
+    new_name = entry_station_name.get().strip()
+    if not new_name:
+        label_stations_info.config(text="❗ Nazwa nie może być pusta")
+        return
+    stations_tab_data[index]['name'] = new_name
+    stations_tab_markers[index].set_text(new_name)
+    update_station_listbox()
+    entry_station_name.delete(0, END)
+    button_edit.config(text="Edytuj", command=edit_station)
+    label_stations_info.config(text="✅ Zmieniono nazwę stacji")
+
 frame_stations = Frame(notebook)
 notebook.add(frame_stations, text="Stacje")
 
-Label(frame_stations, text="Lista wszystkich stacji (do uzupełnienia)", font=("Arial", 14)).pack(pady=20)
+left = Frame(frame_stations)
+left.pack(side=LEFT, fill=Y, padx=10, pady=10)
+
+right = Frame(frame_stations)
+right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+
+Label(left, text="Nazwa stacji:").pack(pady=(5, 0))
+entry_station_name = Entry(left, width=30)
+entry_station_name.pack(pady=2)
+
+button_edit = Button(left, text="Edytuj", command=edit_station)
+button_edit.pack(pady=2)
+
+Button(left, text="Usuń", command=delete_station).pack(pady=2)
+Button(left, text="Pokaż na mapie", command=show_selected_station_on_map).pack(pady=2)
+
+label_stations_info = Label(left, text="Brak akcji", fg="blue", wraplength=200)
+label_stations_info.pack(pady=10)
+
+listbox_stations = Listbox(left, width=45, height=25)
+listbox_stations.pack(pady=10, fill=Y)
+
+map_widget_stations = tkintermapview.TkinterMapView(right, width=800, height=450)
+map_widget_stations.pack(fill=BOTH, expand=True)
+map_widget_stations.set_position(52.0, 19.0)
+map_widget_stations.set_zoom(6)
+
+def on_stations_tab_selected(event):
+    selected_tab = notebook.index("current")
+    if notebook.tab(selected_tab, "text") == "Stacje":
+        update_station_listbox()
+
+notebook.bind("<<NotebookTabChanged>>", on_stations_tab_selected)
+
+# === ZAKŁADKA PRACOWNICY ===
 
 frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
-
 Label(frame_employees, text="Moduł zarządzania pracownikami (w przygotowaniu)", font=("Arial", 14)).pack(pady=20)
+
+# === ZAKŁADKA KLIENCI ===
 
 frame_customers = Frame(notebook)
 notebook.add(frame_customers, text="Klienci")
-
 Label(frame_customers, text="Moduł zarządzania klientami (w przygotowaniu)", font=("Arial", 14)).pack(pady=20)
 
 root.mainloop()
