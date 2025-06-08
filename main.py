@@ -554,7 +554,7 @@ label_customers_info.pack(pady=5)
 
 # --- Mapa Pracownicy i Klienci ---
 frame_map_people = Frame(notebook)
-notebook.add(frame_map_people, text="Mapa Pracownicy i Klienci")
+notebook.add(frame_mapa_people, text="Mapa Pracownicy i Klienci")
 
 map_widget_people = tkintermapview.TkinterMapView(frame_map_people, width=1150, height=700)
 map_widget_people.pack(fill=BOTH, expand=True)
