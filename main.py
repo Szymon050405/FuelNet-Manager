@@ -17,7 +17,7 @@ editing_customer_index = None
 
 # ----------------- STACJE ------------------
 
-from utils import get_fuel_stations_near_city  # dodaj na górze pliku main, jeśli jeszcze nie masz
+from utils import get_fuel_stations_near_city
 
 
 def find_stations():
@@ -32,7 +32,7 @@ def find_stations():
     station_markers.clear()
     station_data.clear()
 
-    stations = get_fuel_stations_near_city(city)  # poprawne źródło danych
+    stations = get_fuel_stations_near_city(city)
 
     if not stations:
         label_info.config(text="⚠️ Nie znaleziono stacji w okolicy.")
@@ -45,7 +45,7 @@ def find_stations():
             station_data.append(station)
             listbox.insert(END, f"{station['name']} – {station['lat']:.5f}, {station['lon']:.5f}")
         except KeyError as e:
-            print(f"Błąd w danych stacji: {e}")  # jeśli jakiś wpis nie ma 'lat', 'lon' lub 'name'
+            print(f"Błąd w danych stacji: {e}")
 
     map_widget_mapa.set_position(stations[0]["lat"], stations[0]["lon"])
     map_widget_mapa.set_zoom(13)
@@ -294,7 +294,7 @@ def add_customer():
             "station": station,
             "location": location
         })
-        update_customer_tables()  # 👈 tworzy nową tabelę dla nowej stacji jeśli trzeba
+        update_customer_tables()
         update_all_customers_table()
         for entry in [entry_customer_name, entry_customer_surname, entry_customer_email,
                       entry_customer_phone, entry_customer_station, entry_customer_lat, entry_customer_lon]:
@@ -456,8 +456,18 @@ frame_employees = Frame(notebook)
 notebook.add(frame_employees, text="Pracownicy")
 frame_employees_left = Frame(frame_employees)
 frame_employees_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
-frame_employees_right = Frame(frame_employees)
-frame_employees_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+canvas_employees = Canvas(frame_employees)
+scrollbar_employees = Scrollbar(frame_employees, orient=VERTICAL, command=canvas_employees.yview)
+scrollable_frame_employees = Frame(canvas_employees)
+scrollable_frame_employees.bind(
+    "<Configure>",
+    lambda e: canvas_employees.configure(scrollregion=canvas_employees.bbox("all"))
+)
+canvas_employees.create_window((0, 0), window=scrollable_frame_employees, anchor="nw")
+canvas_employees.configure(yscrollcommand=scrollbar_employees.set)
+canvas_employees.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+scrollbar_employees.pack(side=RIGHT, fill=Y)
+frame_employees_right = scrollable_frame_employees
 
 Label(frame_employees_left, text="Imię:").pack()
 entry_employee_name = Entry(frame_employees_left, width=30)
@@ -502,8 +512,18 @@ frame_customers = Frame(notebook)
 notebook.add(frame_customers, text="Klienci")
 frame_customers_left = Frame(frame_customers)
 frame_customers_left.pack(side=LEFT, fill=Y, padx=10, pady=10)
-frame_customers_right = Frame(frame_customers)
-frame_customers_right.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+canvas_customers = Canvas(frame_customers)
+scrollbar_customers = Scrollbar(frame_customers, orient=VERTICAL, command=canvas_customers.yview)
+scrollable_frame_customers = Frame(canvas_customers)
+scrollable_frame_customers.bind(
+    "<Configure>",
+    lambda e: canvas_customers.configure(scrollregion=canvas_customers.bbox("all"))
+)
+canvas_customers.create_window((0, 0), window=scrollable_frame_customers, anchor="nw")
+canvas_customers.configure(yscrollcommand=scrollbar_customers.set)
+canvas_customers.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+scrollbar_customers.pack(side=RIGHT, fill=Y)
+frame_customers_right = scrollable_frame_customers
 tree_all_customers = ttk.Treeview(
     frame_customers_right,
     columns=("Imię", "Nazwisko", "Email", "Telefon", "Stacja", "Lokalizacja"),
